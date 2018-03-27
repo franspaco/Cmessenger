@@ -31,7 +31,7 @@ void usage(char * program);
 void printLocalIPs();
 int initServer(char * port);
 void waitForConnections(int server_fd);
-void attendRequest(int client_fd);
+char* getUsername(int client_fd);
 
 
 ///// MAIN FUNCTION
@@ -173,6 +173,7 @@ void waitForConnections(int server_fd) {
     char client_presentation[INET_ADDRSTRLEN];
     int client_fd;
     pid_t new_pid;
+    char buffer[BUFFER_SIZE];
 
     // Get the size of the structure to store client information
     client_address_size = sizeof client_address;
@@ -184,14 +185,28 @@ void waitForConnections(int server_fd) {
         if (client_fd == -1) {
             fatalError("accept");
         }
+
+        int child_to_parent[2];
+        // Open pipe of child to parent
+        if (pipe(child_to_parent) == -1) {
+            perror("Unable to open pipe");
+            exit(EXIT_FAILURE);
+        }
         
         // Create a child to deal with the new client
         new_pid = fork();
 
         // Parent process
         if (new_pid > 0) {
+            // Read username from child
+            read(child_to_parent[0], buffer, BUFFER_SIZE);
+            printf("[INFO] [%i] The username is: %s\n", getpid(), buffer);
+
+
             // Close the socket to the new client
             close(client_fd);
+            close(child_to_parent[0]);
+            close(child_to_parent[1]);
         }
 
         // Child process
@@ -201,9 +216,13 @@ void waitForConnections(int server_fd) {
             printf("[INFO] [%i] Received incomming connection from %s on port %d\n",  getpid(), client_presentation, client_address.sin_port);
             
             // Deal with the client
-            attendRequest(client_fd);
+            char* username = getUsername(client_fd);
+            sprintf(buffer, "%s", username);
+            write(child_to_parent[1], buffer, strlen(buffer)+1);
             // Finish the child process
             close(client_fd);
+            close(child_to_parent[0]);
+            close(child_to_parent[1]);
             exit(EXIT_SUCCESS);
         }
         // Error
@@ -214,10 +233,10 @@ void waitForConnections(int server_fd) {
 }
 
 /*
-    Hear the request from the client and send an answer
+    Hear the request from the client and send an answer. 
+    Get the username
 */
-void attendRequest(int client_fd)
-{
+char* getUsername(int client_fd) {
     char buffer[BUFFER_SIZE];
     int chars_read;
     char username[15];
@@ -231,14 +250,14 @@ void attendRequest(int client_fd)
     chars_read = recv(client_fd, buffer, BUFFER_SIZE, 0);
     if (chars_read == 0) {
         printf("[INFO] [%i] Client disconnected\n", getpid());
-        return;
+        return "";
     }
     if (chars_read == -1) {
         printf("[ERROR] [%i] Client receive error\n", getpid());
-        return;
+        return "";
     }
     // Get the numerical value for iterations
-    sscanf(buffer, "%s", &username);
+    sscanf(buffer, "%s", username);
 
     printf("[INFO] [%i] Got request from client with username=%s\n", getpid(), username);
 
@@ -247,10 +266,11 @@ void attendRequest(int client_fd)
     // SEND
     // Write back the reply
     sprintf(buffer, "%lf\n", dummy);
-    if (send(client_fd, buffer, strlen(buffer) + 1, 0) == -1)
-    {
+    if (send(client_fd, buffer, strlen(buffer) + 1, 0) == -1) {
         printf("[ERROR] [%i] Could not send reply!\n", getpid());   
     }
+
+    return username;
 }
 
 
