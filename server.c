@@ -198,19 +198,43 @@ void waitForConnections(int server_fd) {
 
         // Parent process
         if (new_pid > 0) {
-            // Read username from child
-            read(child_to_parent[0], buffer, BUFFER_SIZE);
-            printf("[INFO] [%i] The username is: %s\n", getpid(), buffer);
+            // Close unwanted channel
+            close(child_to_parent[1]);
 
+            // Structure to indicate the sockets to poll
+            struct pollfd test_fds[1];
+            int poll_result;
+            int timeout = 1000; // In milliseconds (1 sec)
+
+            // POLL
+            // Fill in the data for the structure
+            test_fds[0].fd = server_fd;
+            test_fds[0].events = POLLIN;
+
+            poll_result = poll(test_fds, 1, timeout);
+
+            if (poll_result == -1) {
+                printf("[ERROR] [%i] Error polling pipe\n", getpid());
+            } else if (poll_result == 1) {
+                 if (test_fds[0].revents & POLLIN) {
+
+                    // Read username from child
+                    read(child_to_parent[0], buffer, BUFFER_SIZE);
+                    printf("[INFO] [%i] The username is: %s\n", getpid(), buffer);
+                }
+            }
 
             // Close the socket to the new client
             close(client_fd);
             close(child_to_parent[0]);
-            close(child_to_parent[1]);
+            
         }
 
         // Child process
         else if (new_pid == 0) {
+            // Close unwanted channel
+            close(child_to_parent[0]);
+
             // Get the data from the client
             inet_ntop (client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
             printf("[INFO] [%i] Received incomming connection from %s on port %d\n",  getpid(), client_presentation, client_address.sin_port);
@@ -219,9 +243,10 @@ void waitForConnections(int server_fd) {
             char* username = getUsername(client_fd);
             sprintf(buffer, "%s", username);
             write(child_to_parent[1], buffer, strlen(buffer)+1);
+
             // Finish the child process
             close(client_fd);
-            close(child_to_parent[0]);
+
             close(child_to_parent[1]);
             exit(EXIT_SUCCESS);
         }
