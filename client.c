@@ -24,6 +24,40 @@
 
 #define BUFFER_SIZE 1024
 
+///// FUNCTION DECLARATIONS
+void usage(char * program);
+int openSocket(char * address, char * port);
+int establishUsername(int connection_fd);
+
+
+///// MAIN FUNCTION
+int main(int argc, char * argv[]) {
+    printf("\n=== Cmessenger - The Messenger of the Future ===\n");
+
+    // Check the correct arguments
+    if (argc != 3) {
+        usage(argv[0]);
+    }
+
+    // Start the server
+    int connection_fd = openSocket(argv[1], argv[2]);
+
+    // Establish username
+    if(establishUsername(connection_fd)) {
+        printf("Username saved ok?\n");
+    }
+    else {
+        printf("There was an error when writing the username\n");
+    }
+    
+    // Close the socket
+    close(connection_fd);
+    printf("Good bye!\n");
+
+    return 0;
+}
+
+///// FUNCTION DEFINITIONS
 
 /*
     Explanation to the user of the parameters required to run the program
@@ -84,8 +118,7 @@ int openSocket(char * address, char * port) {
 /*
     Tells the server the username for the current user
 */
-int establishUsername(int connection_fd)
-{
+int establishUsername(int connection_fd) {
     char buffer[BUFFER_SIZE];
     int chars_read;
     char username[15];
@@ -120,30 +153,3 @@ int establishUsername(int connection_fd)
     return result;
 }
 
-
-
-int main(int argc, char * argv[]) {
-    printf("\n=== Cmessenger - The Messenger of the Future ===\n");
-
-    // Check the correct arguments
-    if (argc != 3) {
-        usage(argv[0]);
-    }
-
-    // Start the server
-    int connection_fd = openSocket(argv[1], argv[2]);
-
-    // Establish username
-    if(establishUsername(connection_fd)) {
-        printf("Username saved ok?\n");
-    }
-    else {
-        printf("There was an error when writing the username\n");
-    }
-    
-    // Close the socket
-    close(connection_fd);
-    printf("Good bye!\n");
-
-    return 0;
-}
