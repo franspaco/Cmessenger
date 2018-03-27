@@ -1,12 +1,6 @@
 /*
-    Omar Sanseviero
-    A01021626
-
-    Client program to get the value of PI
-    This program connects to the server using sockets to calculate PI.
-    Additionally, it handles signals; specifically, when the user input
-    is ctrl c, it requests the server for the current computation of
-    PI and the number of iterations.
+    Client program to chat with your friends
+    This program connects to the server using sockets.
 */
 
 #include <stdio.h>
@@ -88,80 +82,48 @@ int openSocket(char * address, char * port) {
 }
 
 /*
-    Requests PI to the server and waits for answer. If user gives a ctrl-c
-    flag, ask the server for the current input.
+    Tells the server the username for the current user
 */
-void requestPI(int connection_fd)
+int establishUsername(int connection_fd)
 {
     char buffer[BUFFER_SIZE];
     int chars_read;
-    unsigned long int iterations;
-    double result;
-    // Structure to indicate the sockets to poll
-    struct pollfd test_fds[1];
-    int poll_result;
-    int timeout = 1000; // In milliseconds (1 sec)
+    char username[15];
 
-    printf("Enter the number of iterations for PI: ");
-    scanf("%lu", &iterations);
+    printf("Enter a username: ");
+    scanf("%s", username);
 
     // Prepare the request to the server
-    sprintf(buffer, "%lu\n", iterations);
+    sprintf(buffer, "%s\n", username);
     
     // SEND
-    // Send the response
+    // Send the username to the server
     if (send(connection_fd, buffer, strlen(buffer) + 1, 0) == -1 )
     {
         fatalError("send");
     }
     
-    while (1)
-    {
-        // POLL
-        // Fill in the data for the structure
-        test_fds[0].fd = connection_fd;
-        test_fds[0].events = POLLIN;
-        // Call poll
-        poll_result = poll(test_fds, 1, timeout);
-        
-        if (poll_result == -1)
-        {
-            fatalError("poll");
-        }
-        else if (poll_result == 0)
-        {
-            printf("Still nothing to receive\n");
-        }
-        else
-        {
-            if (test_fds[0].revents & POLLIN)
-            {
-                break;
-            }
-        }
-    }
-    
-
     // Clear the buffer
     bzero(&buffer, BUFFER_SIZE);
 
     // RECV
-    // Receive the request
+    // Receive the response from server
     chars_read = recv(connection_fd, buffer, BUFFER_SIZE, 0);
     if (chars_read == -1)
     {
         fatalError("recv");
     }
 
-    sscanf(buffer, "%lf", &result);
-    // Print the result
-    printf("The value for PI is: %.20lf\n", result);
+    int result;
+    sscanf(buffer, "%d", &result);
+
+    return result;
 }
 
 
 
 int main(int argc, char * argv[]) {
-    printf("\n=== CLIENT FOR COMPUTING THE VALUE OF pi ===\n");
+    printf("\n=== Cmessenger - The Messenger of the Future ===\n");
 
     // Check the correct arguments
     if (argc != 3) {
@@ -171,11 +133,17 @@ int main(int argc, char * argv[]) {
     // Start the server
     int connection_fd = openSocket(argv[1], argv[2]);
 
-    // Listen for connections from the clients
-    requestPI(connection_fd);
+    // Establish username
+    if(establishUsername(connection_fd)) {
+        printf("Username saved ok?\n");
+    }
+    else {
+        printf("There was an error when writing the username\n");
+    }
     
     // Close the socket
     close(connection_fd);
+    printf("Good bye!\n");
 
     return 0;
 }

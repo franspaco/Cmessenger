@@ -1,11 +1,5 @@
 /*
-    Server program to compute the value of PI
-    This program calls the library function 'get_pi'
-    It will create child processes to attend requests
-    It receives connections using sockets
-
-    Omar Sanseviero
-    A01021626
+    Server program to handle a messenger like system in C
 */
 
 #include <stdio.h>
@@ -204,7 +198,7 @@ void waitForConnections(int server_fd) {
         else if (new_pid == 0) {
             // Get the data from the client
             inet_ntop (client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
-            printf("Received incomming connection from %s on port %d\n", client_presentation, client_address.sin_port);
+            printf("[INFO] [%i] Received incomming connection from %s on port %d\n",  getpid(), client_presentation, client_address.sin_port);
             
             // Deal with the client
             attendRequest(client_fd);
@@ -226,7 +220,7 @@ void attendRequest(int client_fd)
 {
     char buffer[BUFFER_SIZE];
     int chars_read;
-    unsigned long int iterations;
+    char username[15];
     double dummy;
     
     // Clear the buffer to avoid errors
@@ -235,20 +229,18 @@ void attendRequest(int client_fd)
     // RECV
     // Read the request from the client
     chars_read = recv(client_fd, buffer, BUFFER_SIZE, 0);
-    if (chars_read == 0)
-    {
+    if (chars_read == 0) {
         printf("[INFO] [%i] Client disconnected\n", getpid());
         return;
     }
-    if (chars_read == -1)
-    {
+    if (chars_read == -1) {
         printf("[ERROR] [%i] Client receive error\n", getpid());
         return;
     }
     // Get the numerical value for iterations
-    sscanf(buffer, "%lu", &iterations);
+    sscanf(buffer, "%s", &username);
 
-    printf("[INFO] [%i] Got request from client with iterations=%lu\n", getpid(), iterations);
+    printf("[INFO] [%i] Got request from client with username=%s\n", getpid(), username);
 
     dummy = 1.5;
 
