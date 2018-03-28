@@ -174,7 +174,7 @@ void waitForConnections(int server_fd) {
     char client_presentation[INET_ADDRSTRLEN];
     int client_fd;
     pid_t new_pid;
-    char buffer[BUFFER_SIZE];
+    //char buffer[BUFFER_SIZE];
 
     // Get the size of the structure to store client information
     client_address_size = sizeof client_address;
@@ -186,6 +186,10 @@ void waitForConnections(int server_fd) {
         if (client_fd == -1) {
             fatalError("accept");
         }
+        printf("%d\n", client_fd);
+
+        // TODO(osanseviero): Once we get message from client, use pipe 
+        // to receive it in parent
 
         //int child_to_parent[2];
         // Open pipe of child to parent
@@ -227,7 +231,12 @@ void waitForConnections(int server_fd) {
             }
             */
             // Close the socket to the new client
-            close(client_fd);
+
+            //TODO(osanseviero): Commented so client_fd is unique. This 
+            // needs to be uncommented later on. The pipes will ensure
+            // that it does not close the socket tothe new client before
+            // it should.
+            //close(client_fd);
             //close(child_to_parent[0]);
             
         }
@@ -245,8 +254,8 @@ void waitForConnections(int server_fd) {
             char* username = getUsername(client_fd);
 
             // Store username and IP in table
-            printf("[INFO] [%i] Storing username|ip|port in table",  getpid());
-            storeUser(username, client_presentation, client_address.sin_port);
+            printf("[INFO] [%i] Storing username|ip|port in table\n",  getpid());
+            storeUser(username, client_fd);
             free(username);
 
             //sprintf(buffer, "%s", username);
