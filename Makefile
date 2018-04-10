@@ -3,12 +3,12 @@
 ### Variables for this project ###
 # These should be the only ones that need to be modified
 # The files that must be compiled, with a .o extension
-OBJECTS = fatal_error.o user_helper.o
+OBJECTS = fatal_error.o sockets.o server.o
 # The header files
-DEPENDS = fatal_error.h user_helper.h
+DEPENDS = fatal_error.h sockets.h server.h protocol.h
 # The executable programs to be created
-CLIENT = client
-SERVER = server
+CLIENT = msgr_client
+SERVER = msgr_server
 
 ### Variables for the compilation rules ###
 # These should work for most projects, but can be modified when necessary
@@ -20,7 +20,7 @@ CC = gcc
 CFLAGS = -Wall -g -std=gnu99 -pedantic # -O2
 # Options to use for the final linking process
 # This one links the math library
-LDLIBS = -lm
+LDLIBS = -lpthread
 
 ### The rules ###
 # These should work for most projects without change

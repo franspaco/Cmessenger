@@ -1,320 +1,165 @@
-/*
-    Server program to handle a messenger like system in C
-*/
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-// Sockets libraries
-#include <netdb.h>
-#include <arpa/inet.h>
-
-// Libraries for polling functionality
-#include <sys/poll.h>
-#include <errno.h>
-
-// Custom libraries
-#include <ifaddrs.h>
-
-// Custom libraries
-#include "fatal_error.h"
-#include "user_helper.h"
-
-#include <signal.h>
-
-#define BUFFER_SIZE 1024
-#define MAX_QUEUE 5
-
-///// FUNCTION DECLARATIONS
-void usage(char * program);
-void printLocalIPs();
-int initServer(char * port);
-void waitForConnections(int server_fd);
-char* getUsername(int client_fd);
 
 
-///// MAIN FUNCTION
-int main(int argc, char * argv[]){
-    int server_fd;
+#include "server.h"
 
-    printf("\n=== MESSENGER SERVER ===\n");
+int exit_flag = 0;
 
-    // Check the correct arguments
-    if (argc != 2)
-    {
-        usage(argv[0]);
-    }
-
-    // Show the IPs assigned to this computer
-    printLocalIPs();
-
-    // Start the server
-    server_fd = initServer(argv[1]);
-    // Listen for connections from the clients
-    waitForConnections(server_fd);
-    // Close the socket
-    close(server_fd);
-
-    return 0;
+// SERVER LOG HELPER STUFF
+const char * const log_types_strings[] = { "INFO", "ERROR", "WARN", "DEBUG", "ALERT"};
+void conn_log(log_t type, tdata_t* data, char* msg){
+    printf("[%s][%i] %s\n", log_types_strings[type], data->id, msg);
+}
+void serverlog(log_t type, char* msg){
+    printf("[%s] %s\n", log_types_strings[type], msg);
 }
 
-///// FUNCTION DEFINITIONS
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+///                               PRIVATE FUNCTIONS
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-/*
-    Explanation to the user of the parameters required to run the program
-*/
-void usage(char * program)
-{
-    printf("Usage:\n");
-    printf("\t%s {port_number}\n", program);
-    exit(EXIT_FAILURE);
-}
 
-/*
- *   Show the local IP addresses, to allow testing
- *   Based on code from:
- *      https://stackoverflow.com/questions/20800319/how-do-i-get-my-ip-address-in-c-on-linux
- */
-void printLocalIPs() {
-    struct ifaddrs * addrs;
-    struct ifaddrs * tmp;
-    
-    // Get the list of IP addresses used by this machine
-    getifaddrs(&addrs);
-    tmp = addrs;
+void* attendClient(void* arg){
+    tdata_t* data = (tdata_t*) arg;
 
-    printf("Server IP addresses:\n");
+    // Stuff required by poll
+    struct pollfd test_fds[1];
+    int timeout = 10; // 10ms tiemout
+    int poll_result;
 
-    while (tmp) {
-        if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET) {
-            // Get the address structure casting as IPv4
-            struct sockaddr_in *pAddr = (struct sockaddr_in *)tmp->ifa_addr;
-            // Print the ip address of the local machine
-            printf("%s: %s\n", tmp->ifa_name, inet_ntoa(pAddr->sin_addr));
+    // Reception buffer
+    char buffer[BUFFER_SIZE];
+
+    while(!exit_flag){
+        // POLL
+        // Fill in the data for the structure
+        test_fds[0].fd = data->fd;
+        test_fds[0].events = POLLIN;
+        // Call poll
+        poll_result = poll(test_fds, 1, timeout);
+        
+        if (poll_result == -1) {
+            // SIGINT will trigger this
+            // errno is checked to make sure it was a signal that got us here and not an error
+            if(errno == EINTR && exit_flag){
+                printf("POLL KILLED BY FLAG!\n");
+                // An exit signal got us here, therefore we must break
+                break;
+            }
+            else{
+                // Some other error got us here
+                fatalError("poll");
+            }
         }
-        // Advance in the linked list
-        tmp = tmp->ifa_next;
+        else if (poll_result == 0){
+            // Nothing
+        }
+        else {
+            // Got a message
+            if(recvString(data->fd, buffer, BUFFER_SIZE) == 0){
+                conn_log(INFO, data, "Client disconnected.");
+                break;
+            }
+            conn_log(INFO, data, "GOT TEXT:");
+            printf("\t%s\n", buffer);
+            }
     }
 
-    freeifaddrs(addrs);
+    conn_log(INFO, data, "Closing handler.");
+    free(data);
+    pthread_exit(NULL);
 }
 
-/*
- *  Prepare and open the listening socket
- *   Returns the file descriptor for the socket
- *   Remember to close the socket when finished
- */
-int initServer(char * port) {
-    struct addrinfo hints;
-    struct addrinfo * server_info = NULL;
-    int server_fd;
-    int reuse = 1;
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+///                                   PUBLIC FUNCTIONS
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-    // Prepare the hints structure
-    bzero (&hints, sizeof hints);
-
-    // Set to use IPv4
-    hints.ai_family = AF_INET;
-
-    // Set type of socket
-    hints.ai_socktype = SOCK_STREAM;
-
-    // Set to look for the address automatically
-    hints.ai_flags = AI_PASSIVE;
-
-    // GETADDRINFO
-    // Use the presets to get the actual information for the socket
-    if (getaddrinfo(NULL, port, &hints, &server_info) == -1) {
-        fatalError("getaddrinfo");
-    }
-
-    // SOCKET
-    // Open the socket using the information obtained
-    server_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-    if (server_fd == -1) {
-        close(server_fd);
-        fatalError("socket");
-    }
-
-    // SETSOCKOPT
-    // Allow reuse of the same port even when the server does not close correctly
-    if (setsockopt (server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof (int)) == -1) {
-        fatalError("setsockopt");
-    }
-
-    // BIND
-    // Connect the port with the desired port
-    if (bind(server_fd, server_info->ai_addr, server_info->ai_addrlen) == -1) {
-        fatalError("bind");
-    }
-
-    // LISTEN
-    // Start listening for incomming connections
-    if (listen(server_fd, MAX_QUEUE) == -1) {
-        fatalError("listen");
-    }
-
-    // FREEADDRINFO
-    // Free the memory used for the address info
-    freeaddrinfo(server_info);
-
-    printf("Server ready\n");
-
-    return server_fd;
+void activateExitFlag(){
+    exit_flag = 1;
 }
 
-/*
- *   Main loop to wait for incomming connections
- */
-void waitForConnections(int server_fd) {
+void awaitConnections(int server_fd){
     struct sockaddr_in client_address;
     socklen_t client_address_size;
     char client_presentation[INET_ADDRSTRLEN];
     int client_fd;
-    pid_t new_pid;
-    //char buffer[BUFFER_SIZE];
+    pthread_t new_tid;
+    int poll_response;
+	int timeout = 100;		// Time in milliseconds (0.5 seconds)
+
+    // Thread id counter for debug purposes
+    int next_id = 100;
 
     // Get the size of the structure to store client information
     client_address_size = sizeof client_address;
 
-    while (1) {
-        // ACCEPT
-        // Wait for a client connection
-        client_fd = accept(server_fd, (struct sockaddr *) &client_address, &client_address_size);
-        if (client_fd == -1) {
-            fatalError("accept");
+    while (1)
+    {
+		//// POLL
+        // Create a structure array to hold the file descriptors to poll
+        struct pollfd test_fds[1];
+        // Fill in the structure
+        test_fds[0].fd = server_fd;
+        test_fds[0].events = POLLIN;    // Check for incomming data
+        // Check if there is any incomming communication
+        poll_response = poll(test_fds, 1, timeout);
+
+		// Error when polling
+        if (poll_response == -1)
+        {
+            // SIGINT will trigger this
+            // errno is checked to make sure it was a signal that got us here and not an error
+            if(errno == EINTR && exit_flag){
+                printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
+                // An exit signal got us here, therefore we must break
+                break;
+            }
+            else{
+                // Some other error got us here
+                fatalError("poll");
+            }
         }
-        printf("%d\n", client_fd);
+		// Timeout finished without reading anything
+        else if (poll_response == 0){
 
-        // TODO(osanseviero): Once we get message from client, use pipe 
-        // to receive it in parent
+            // The exit flag has been activated => stop listening for requests
+            if(exit_flag){
+                printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
+                break;
+            }
+            //printf("No response after %d seconds\n", timeout);
+        }
+		// There is something ready at the socket
+        else
+        {
+            // Check the type of event detected
+            if (test_fds[0].revents & POLLIN)
+            {
+				// ACCEPT
+				// Wait for a client connection
+				client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_size);
+				if (client_fd == -1)
+				{
+					fatalError("ERROR: accept");
+				}
+				 
+				// Get the data from the client
+				inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
 
-        //int child_to_parent[2];
-        // Open pipe of child to parent
-        // if (pipe(child_to_parent) == -1) {
-        //    perror("Unable to open pipe");
-        //    exit(EXIT_FAILURE);
-        //}
-        
-        // Create a child to deal with the new client
-        new_pid = fork();
+				// Prepare the structure to send to the thread
+                tdata_t* temp_data = malloc(sizeof(tdata_t));
+                temp_data->id = next_id++; // Assign id and increment
+                temp_data->fd = client_fd;
 
-        // Parent process
-        if (new_pid > 0) {
-            // Close unwanted channel
-            //close(child_to_parent[1]);
-
-            // Structure to indicate the sockets to poll
-            //struct pollfd test_fds[1];
-            //int poll_result;
-            //int timeout = 1000; // In milliseconds (1 sec)
-
-            // POLL
-            // Fill in the data for the structure
-            /*
-            test_fds[0].fd = server_fd;
-            test_fds[0].events = POLLIN;
-
-            poll_result = poll(test_fds, 1, timeout);
-
-            if (poll_result == -1) {
-                printf("[ERROR] [%i] Error polling pipe\n", getpid());
-            } else if (poll_result == 1) {
-                 if (test_fds[0].revents & POLLIN) {
-
-                    // Read username from child
-                    read(child_to_parent[0], buffer, BUFFER_SIZE);
-                    printf("[INFO] [%i] The username is: %s\n", getpid(), buffer);
+				// CREATE A THREAD
+                int status;
+                status = pthread_create(&new_tid, NULL, attendClient, (void*) temp_data);
+                if( status != 0){
+                    printf("[ERROR] Failed to create handler for %s:%d.\n", client_presentation, client_address.sin_port);
+                }
+                else{
+                    printf("\n[INFO] Created handler [%i] for request from %s:%d.\n", temp_data->id, client_presentation, client_address.sin_port);
                 }
             }
-            */
-            // Close the socket to the new client
-
-            //TODO(osanseviero): Commented so client_fd is unique. This 
-            // needs to be uncommented later on. The pipes will ensure
-            // that it does not close the socket tothe new client before
-            // it should.
-            //close(client_fd);
-            //close(child_to_parent[0]);
-            
-        }
-
-        // Child process
-        else if (new_pid == 0) {
-            // Close unwanted channel
-            //close(child_to_parent[0]);
-
-            // Get the data from the client
-            inet_ntop (client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
-            printf("[INFO] [%i] Received incomming connection from %s on port %d\n",  getpid(), client_presentation, client_address.sin_port);
-            
-            // Get username from client
-            char* username = getUsername(client_fd);
-
-            // Store username and IP in table
-            printf("[INFO] [%i] Storing username|ip|port in table\n",  getpid());
-            storeUser(username, client_fd);
-            free(username);
-
-            //sprintf(buffer, "%s", username);
-            //write(child_to_parent[1], buffer, strlen(buffer)+1);
-
-            // Finish the child process
-            close(client_fd);
-
-            //close(child_to_parent[1]);
-            exit(EXIT_SUCCESS);
-        }
-        // Error
-        else {
-            fatalError("Unable to fork");
         }
     }
 }
-
-/*
-    Hear the request from the client and send an answer. 
-    Get the username
-*/
-char* getUsername(int client_fd) {
-    char buffer[BUFFER_SIZE];
-    int chars_read;
-    double dummy;
-    
-    // Clear the buffer to avoid errors
-    bzero(&buffer, BUFFER_SIZE);
-
-    // RECV
-    // Read the request from the client
-    chars_read = recv(client_fd, buffer, BUFFER_SIZE, 0);
-    if (chars_read == 0) {
-        printf("[INFO] [%i] Client disconnected\n", getpid());
-        return "";
-    }
-    if (chars_read == -1) {
-        printf("[ERROR] [%i] Client receive error\n", getpid());
-        return "";
-    }
-
-    char *username = (char*) malloc(100);
-    sscanf(buffer, "%s", username);
-
-    printf("[INFO] [%i] Got request from client with username=%s\n", getpid(), username);
-
-    dummy = 1.5;
-
-    // SEND
-    // Write back the reply
-    sprintf(buffer, "%lf\n", dummy);
-    if (send(client_fd, buffer, strlen(buffer) + 1, 0) == -1) {
-        printf("[ERROR] [%i] Could not send reply!\n", getpid());   
-    }
-
-    return username;
-}
-
-
-
-
