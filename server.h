@@ -24,7 +24,7 @@
 #define BUFFER_SIZE 1024
 #define MAX_QUEUE 10
 
-// Server structs
+// Server enums
 typedef enum log_types {
     INFO,
     ERROR,
