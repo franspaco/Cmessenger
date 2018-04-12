@@ -16,21 +16,23 @@ void serverlog(log_t type, char* msg){
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                               PRIVATE FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
+void destroyMsg(msg_t* msg){
+    free(msg->content);
+    free(msg);
+}
 
 void* attendClient(void* arg){
     tdata_t* data = (tdata_t*) arg;
 
     //TODO: create new queue* here
-    int* queue = malloc(sizeof(int));
-    *queue = 0;
+    msg_t* queue = NULL;
 
-    long client_id = rw_list_push_back(data->clients, queue);
+    long client_id = rw_list_push_back(data->clients, (void**)&queue);
     printf("[%s][%i] %s %lu\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
 
     // Stuff required by poll
     struct pollfd test_fds[1];
-    int timeout = 10; // 10ms tiemout
+    int timeout = 100; // 10ms tiemout
     int poll_result;
 
     // Reception buffer
@@ -59,11 +61,13 @@ void* attendClient(void* arg){
         }
         else if (poll_result == 0){
             // Nothing: check queue
-            if(*queue != 0){
-                char buffer[1024];
-                sprintf(buffer, "data: %i", *queue);
-                sendString(data->fd, buffer);
-                *queue = 0;
+            if(queue != NULL){
+                conn_log(INFO, data, "Sending msg.");
+                char sub_buffer[1024];
+                sprintf(sub_buffer, "%lu %s", queue->source_id, (char*)queue->content);
+                sendString(data->fd, sub_buffer);
+                destroyMsg(queue);
+                queue = NULL;
             }
         }
         else {
@@ -75,11 +79,15 @@ void* attendClient(void* arg){
             conn_log(INFO, data, "GOT TEXT:");
             printf("\t%s\n", buffer);
             long id;
-            int msg;
-            sscanf(buffer, "%lu %i", &id, &msg);
-            int* dest;
+            msg_t* msg_temp = malloc(sizeof(msg_t));
+            msg_temp->source_id = client_id;
+            msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
+            sscanf(buffer, "%lu %s", &id, msg_temp->content);
+
+            void** dest;
             if(rw_list_find(data->clients, &dest, id)){
-                *dest = msg;
+                msg_t** dest_casted = (msg_t**) dest;
+                *dest_casted = msg_temp;
             }
             else {
                 conn_log(ERROR, data, "Sent message to invalid ID.");
@@ -187,6 +195,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
                 }
                 else{
                     printf("\n[INFO] Created handler [%i] for request from %s:%d.\n", temp_data->id, client_presentation, client_address.sin_port);
+                    pthread_detach(new_tid);
                 }
             }
         }

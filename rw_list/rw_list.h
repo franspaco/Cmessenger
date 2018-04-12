@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 // Must be a pointer
-#define TYPE int*
+#define TYPE void**
 
 typedef struct node_struct {
     long id;

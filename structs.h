@@ -11,5 +11,11 @@ typedef struct thread_data{
     //TODO: add queue
 } tdata_t;
 
+typedef struct message_struct{
+    long source_id;
+    //char* source_uanme;
+    char* content;
+} msg_t;
+
 
 #endif
