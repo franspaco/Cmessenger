@@ -37,7 +37,7 @@ long rw_list_push_back(rw_list_t* list, TYPE new_data){
     return new_node->id;
 }
 
-int rw_list_delete(rw_list_t* list, TYPE* dest, long id){
+int rw_list_delete(rw_list_t* list, long id){
     pthread_rwlock_t* lock = &(list->rw_lock);
     pthread_rwlock_wrlock(lock);
 
@@ -51,12 +51,6 @@ int rw_list_delete(rw_list_t* list, TYPE* dest, long id){
     // In case the head is the desired item
     if(curr->id == id){
         list->root = curr->next;
-        if(dest == NULL){
-            free(curr->data);
-        }
-        else{
-            *dest = curr->data;
-        }
         free(curr);
         pthread_rwlock_unlock(lock);
         return 1;
@@ -71,12 +65,6 @@ int rw_list_delete(rw_list_t* list, TYPE* dest, long id){
         if(curr->id == id){
             // ID was found: delete
             prev->next = curr->next;
-            if(dest == NULL){
-                free(curr->data);
-            }
-            else{
-                *dest = curr->data;
-            }
             free(curr);
             pthread_rwlock_unlock(lock);
             return 1;
@@ -117,5 +105,8 @@ int rw_list_length(rw_list_t* list){
     }
     pthread_rwlock_unlock(lock);
     return len;
+}
+
+void rw_list_clear(rw_list_t* list){
 
 }

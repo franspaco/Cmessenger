@@ -19,6 +19,7 @@
 #include "sockets.h"
 #include "fatal_error.h"
 #include "structs.h"
+#include "rw_list/rw_list.h"
 
 // SERVER DEFINITIONS
 #define BUFFER_SIZE 1024
@@ -39,7 +40,7 @@ typedef enum log_types {
 /**
  * Main server function
  */
-void awaitConnections(int server_fd);
+void awaitConnections(int server_fd, rw_list_t* client_list);
 
 /**
  * Activate the exit flag to end the server

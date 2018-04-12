@@ -32,12 +32,9 @@ long rw_list_push_back(rw_list_t* list, TYPE new_data);
 
 /**
  * Deletes a node with a given ID from a list
- * Sets dest to point to the data so it can be retrieved/freed
- * If dest==NULL if will free the pointer contained
- *   !! Use with caution !!
- * Returns 1 on success, 0 if the node was not found
+ *  Warning: Does nothing to the contained data
  */
-int rw_list_delete(rw_list_t* list, TYPE* dest, long id);
+int rw_list_delete(rw_list_t* list, long id);
 
 
 /**
@@ -51,6 +48,12 @@ int rw_list_find(rw_list_t* list, TYPE* dest, long id);
  * Returns the length of a list
  */
 int rw_list_length(rw_list_t* list);
+
+/**
+ * Frees all the nodes in a list and the list itself
+ * Does NOT free the data pointers
+ */
+void rw_list_clear(rw_list_t* list);
 
 
 #endif

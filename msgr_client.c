@@ -48,8 +48,10 @@ int main(int argc, char * argv[])
     // Start the server
     connection_fd = connectSocket(argv[1], argv[2]);
 	
+    char input = 0;
 
-    sendString(connection_fd, "HELLO WORLD!");
+    //TODO: add something to send
+    
 
     // Close the socket
     close(connection_fd);

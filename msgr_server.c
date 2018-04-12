@@ -25,10 +25,17 @@ int main(int argc, char * argv[]){
 
     serverlog(INFO, "Server ready!");
 
-    awaitConnections(connection_fd);
+    // Init the client list
+    rw_list_t* client_list = rw_list_init();
+
+    awaitConnections(connection_fd, client_list);
 
     // Close the socket
     close(connection_fd);
+
+    //TODO: delete all nodes in client list
+    // Free the client list
+    free(client_list);
 
     return 0;
 }

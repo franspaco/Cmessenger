@@ -21,6 +21,13 @@ void serverlog(log_t type, char* msg){
 void* attendClient(void* arg){
     tdata_t* data = (tdata_t*) arg;
 
+    //TODO: create new queue* here
+    int* queue = malloc(sizeof(int));
+    *queue = 0;
+
+    long client_id = rw_list_push_back(data->clients, queue);
+    printf("[%s][%i] %s %lu\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
+
     // Stuff required by poll
     struct pollfd test_fds[1];
     int timeout = 10; // 10ms tiemout
@@ -51,7 +58,12 @@ void* attendClient(void* arg){
             }
         }
         else if (poll_result == 0){
-            // Nothing
+            // Nothing: check queue
+            if(*queue != 0){
+                char buffer[1024];
+                sprintf(buffer, "data: %i", *queue);
+                sendString(data->fd, buffer);
+            }
         }
         else {
             // Got a message
@@ -63,8 +75,14 @@ void* attendClient(void* arg){
             printf("\t%s\n", buffer);
             }
     }
-
+    
     conn_log(INFO, data, "Closing handler.");
+
+    // Remove the client from the client list
+    rw_list_delete(data->clients, client_id);
+    // Free the associated queue
+    free(queue);
+    // Free data struct pased on to the thread
     free(data);
     pthread_exit(NULL);
 }
@@ -77,7 +95,7 @@ void activateExitFlag(){
     exit_flag = 1;
 }
 
-void awaitConnections(int server_fd){
+void awaitConnections(int server_fd, rw_list_t* client_list){
     struct sockaddr_in client_address;
     socklen_t client_address_size;
     char client_presentation[INET_ADDRSTRLEN];
@@ -149,6 +167,7 @@ void awaitConnections(int server_fd){
                 tdata_t* temp_data = malloc(sizeof(tdata_t));
                 temp_data->id = next_id++; // Assign id and increment
                 temp_data->fd = client_fd;
+                temp_data->clients = client_list;
 
 				// CREATE A THREAD
                 int status;
