@@ -102,7 +102,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
     int client_fd;
     pthread_t new_tid;
     int poll_response;
-	int timeout = 100;		// Time in milliseconds (0.5 seconds)
+	int timeout = 100;		// Time in milliseconds (0.1 seconds)
 
     // Thread id counter for debug purposes
     int next_id = 100;
@@ -110,8 +110,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
     // Get the size of the structure to store client information
     client_address_size = sizeof client_address;
 
-    while (1)
-    {
+    while (!exit_flag) {
 		//// POLL
         // Create a structure array to hold the file descriptors to poll
         struct pollfd test_fds[1];
@@ -127,7 +126,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
             // SIGINT will trigger this
             // errno is checked to make sure it was a signal that got us here and not an error
             if(errno == EINTR && exit_flag){
-                printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
+                //printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
                 // An exit signal got us here, therefore we must break
                 break;
             }
@@ -141,7 +140,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
 
             // The exit flag has been activated => stop listening for requests
             if(exit_flag){
-                printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
+                //printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
                 break;
             }
             //printf("No response after %d seconds\n", timeout);
@@ -181,4 +180,6 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
             }
         }
     }
+    printf("\n\n");
+    serverlog(ALERT, "SERVER SHUTTING DOWN! - No longer listening.");
 }

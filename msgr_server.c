@@ -17,8 +17,12 @@ int main(int argc, char * argv[]){
         usage(argv[0]);
     }
 
+    // Set up SIGINT handler
+    setupHandlers();
+
     // Show the IPs assigned to this computer
 	printLocalIPs();
+    printf("\n");
 
     // Start the server
     connection_fd = initServer(argv[1], MAX_QUEUE);;
@@ -35,7 +39,9 @@ int main(int argc, char * argv[]){
 
     // Wait for all threads to get themselves out of the list
     //  and free their own memory before freeing the list
+    serverlog(INFO, "Waiting for connections to close.");
     while(rw_list_length(client_list) > 0){}
+    serverlog(INFO, "All connections closed.");
     // Free the client list
     free(client_list);
 
