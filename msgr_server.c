@@ -33,7 +33,9 @@ int main(int argc, char * argv[]){
     // Close the socket
     close(connection_fd);
 
-    //TODO: delete all nodes in client list
+    // Wait for all threads to get themselves out of the list
+    //  and free their own memory before freeing the list
+    while(rw_list_length(client_list) > 0){}
     // Free the client list
     free(client_list);
 
