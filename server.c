@@ -63,6 +63,7 @@ void* attendClient(void* arg){
                 char buffer[1024];
                 sprintf(buffer, "data: %i", *queue);
                 sendString(data->fd, buffer);
+                *queue = 0;
             }
         }
         else {
@@ -73,7 +74,17 @@ void* attendClient(void* arg){
             }
             conn_log(INFO, data, "GOT TEXT:");
             printf("\t%s\n", buffer);
+            long id;
+            int msg;
+            sscanf(buffer, "%lu %i", &id, &msg);
+            int* dest;
+            if(rw_list_find(data->clients, &dest, id)){
+                *dest = msg;
             }
+            else {
+                conn_log(ERROR, data, "Sent message to invalid ID.");
+            }
+        }
     }
     
     conn_log(INFO, data, "Closing handler.");
