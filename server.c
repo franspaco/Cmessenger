@@ -27,6 +27,7 @@ void* attendClient(void* arg){
     //TODO: create new queue* here
     msg_t* queue = NULL;
 
+    //TODO: add the queue* to the client list
     long client_id = rw_list_push_back(data->clients, (void**)&queue);
     printf("[%s][%i] %s %lu\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
 
