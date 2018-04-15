@@ -6,22 +6,22 @@ int exit_flag = 0;
 
 // SERVER LOG HELPER STUFF
 const char * const log_types_strings[] = { "INFO", "ERROR", "WARN", "DEBUG", "ALERT"};
-void conn_log(log_t type, tdata_t* data, char* msg){
+void conn_log(log_t type, tdata_t* data, char* msg) {
     printf("[%s][%i] %s\n", log_types_strings[type], data->id, msg);
 }
-void serverlog(log_t type, char* msg){
+void serverlog(log_t type, char* msg) {
     printf("[%s] %s\n", log_types_strings[type], msg);
 }
 
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                               PRIVATE FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-void destroyMsg(msg_t* msg){
+void destroyMsg(msg_t* msg) {
     free(msg->content);
     free(msg);
 }
 
-void* attendClient(void* arg){
+void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
     //TODO: create new queue* here
@@ -39,7 +39,7 @@ void* attendClient(void* arg){
     // Reception buffer
     char buffer[BUFFER_SIZE];
 
-    while(!exit_flag){
+    while(!exit_flag) {
         // POLL
         // Fill in the data for the structure
         test_fds[0].fd = data->fd;
@@ -60,7 +60,7 @@ void* attendClient(void* arg){
                 fatalError("poll");
             }
         }
-        else if (poll_result == 0){
+        else if (poll_result == 0) {
             // Nothing: check queue
             if(queue != NULL){
                 conn_log(INFO, data, "Sending msg.");
@@ -141,8 +141,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
         poll_response = poll(test_fds, 1, timeout);
 
 		// Error when polling
-        if (poll_response == -1)
-        {
+        if (poll_response == -1) {
             // SIGINT will trigger this
             // errno is checked to make sure it was a signal that got us here and not an error
             if(errno == EINTR && exit_flag){
@@ -156,8 +155,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
             }
         }
 		// Timeout finished without reading anything
-        else if (poll_response == 0){
-
+        else if (poll_response == 0) {
             // The exit flag has been activated => stop listening for requests
             if(exit_flag){
                 //printf("\n\n[ALERT] SERVER SHUTTING DOWN! - No longer listening.\n");
@@ -166,16 +164,13 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
             //printf("No response after %d seconds\n", timeout);
         }
 		// There is something ready at the socket
-        else
-        {
+        else {
             // Check the type of event detected
-            if (test_fds[0].revents & POLLIN)
-            {
+            if (test_fds[0].revents & POLLIN) {
 				// ACCEPT
 				// Wait for a client connection
 				client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_size);
-				if (client_fd == -1)
-				{
+				if (client_fd == -1) {
 					fatalError("ERROR: accept");
 				}
 				 
