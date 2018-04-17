@@ -1,28 +1,28 @@
-
-
 /**
+ * Client Program to access the messages. 
+ * This program connects to the server using sockets.
+ * 
  * Francisco Huelsz Prince
  * A01019512
+ * 
+ * Omar Sanseviero Guezmes
+ * A01021626
+ *
+ * Edgar García
  */
-
-/*
-    Client program to access the accounts in the bank
-    This program connects to the server using sockets
-
-    Gilberto Echeverria
-    gilecheverria@yahoo.com
-    29/03/2018
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 // Sockets libraries
 #include <netdb.h>
 #include <arpa/inet.h>
+
 // poll
 #include <sys/poll.h>
+
 // Custom libraries
 #include "sockets.h"
 #include "fatal_error.h"
@@ -86,7 +86,7 @@ void client_ops(int fd){
     while(input != 'x'){
         printf("OPTs:\n s - send\n x - exit\n");
         while(1){
-            test_fds[0].fd = stdin->_fileno;
+            test_fds[0].fd = stdin->_file;
             test_fds[0].events = POLLIN;
             poll_result = poll(test_fds, 1, timeout);
             if(poll_result == -1){

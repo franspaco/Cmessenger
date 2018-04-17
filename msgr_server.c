@@ -1,4 +1,14 @@
-
+/**
+ * Messenger Server basic functions
+ * 
+ * Francisco Huelsz Prince
+ * A01019512
+ * 
+ * Omar Sanseviero Guezmes
+ * A01021626
+ *
+ * Edgar García
+ */
 
 #include "server.h"
 

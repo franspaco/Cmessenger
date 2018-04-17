@@ -1,4 +1,3 @@
-
 #ifndef SERVER_H_lol
 #define SERVER_H_lol
 
@@ -18,6 +17,7 @@
 #include "protocol.h"
 #include "sockets.h"
 #include "fatal_error.h"
+#include "queue.h"
 #include "structs.h"
 #include "rw_list/rw_list.h"
 
