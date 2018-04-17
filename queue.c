@@ -1,6 +1,6 @@
 #include "queue.h"
 
-struct QueueHeader* createQueue() {
+QueueHeader* createQueue() {
   struct QueueHeader *handle = malloc(sizeof(*handle));
   handle->head = NULL;
   handle->tail = NULL;

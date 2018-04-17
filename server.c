@@ -24,7 +24,8 @@ void* attendClient(void* arg) {
 
     //TODO: create new queue* here
     msg_t* queue = NULL;
-    QueueHeader* q = createQueue();
+    QueueHeader* q = NULL;
+    q = createQueue();
 
     //TODO: add the queue* to the client list
     long client_id = rw_list_push_back(data->clients, (void**)&queue);

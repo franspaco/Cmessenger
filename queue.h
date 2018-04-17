@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-void struct QueueHeader* createQueue();
-
 typedef struct QueueElem {
   void *next;
   void *value;
@@ -17,5 +15,6 @@ typedef struct QueueHeader {
   pthread_mutex_t *mutex;
 } QueueHeader;
 
+QueueHeader* createQueue();
 
 #endif
