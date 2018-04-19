@@ -9,12 +9,12 @@ typedef enum s2c_codes {
     /**
      * Last request was OK
      */
-    R_OK,
+    REQ_OK,
 
     /**
      * Last request raised an ERROR
      */
-    R_ERR,
+    REQ_ERR,
 
     /**
      * Queried user was found
