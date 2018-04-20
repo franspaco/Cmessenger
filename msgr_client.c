@@ -19,8 +19,10 @@ static void finish(int sig)
 
 int main(int argc, char * argv[]){
 
-    /*
+    char buffer[SOCK_BUFF_SIZE];
+
     int connection_fd;
+    /*
     // Check the correct arguments
     if (argc != 3) {
         usage(argv[0]);
@@ -29,47 +31,45 @@ int main(int argc, char * argv[]){
     // Get username
     char* uname = getUsername();
 
+    /*
     // Start the client
-    //connection_fd = connectSocket(argv[1], argv[2]);
+    connection_fd = connectSocket(argv[1], argv[2]);
     
+    // Send hello message
+    sprintf(buffer, "%i %s", C_START, uname);
+    sendString(connection_fd, buffer);
 
-
+    // Wait for server response
+    if(!recvString(connection_fd, buffer, SOCK_BUFF_SIZE)){
+        printf("Could not log in!1\n");
+        exit(0);
+    }
+    // If code was not the expected OK -> error and quit
+    if(getCode(buffer) != REQ_OK){
+        printf("Could not log in!2\n");
+        exit(0);
+    }
+    */
 
     // Start ncurses
-    initscr();
-    keypad(stdscr, TRUE);
-    noecho();
-    cbreak();
+    startNcurses();
 
-    if (has_colors()) {
-        start_color();
-        /*
-         * Simple color assignment, often all we need.  Color pair 0 cannot
-         * be redefined.  This example uses the same value for the color
-         * pair as for the foreground color, though of course that is not
-         * necessary:
-         */
-        init_pair(1, COLOR_RED,     COLOR_BLACK);
-        init_pair(2, COLOR_GREEN,   COLOR_BLACK);
-        init_pair(3, COLOR_YELLOW,  COLOR_BLACK);
-        init_pair(4, COLOR_BLUE,    COLOR_BLACK);
-        init_pair(5, COLOR_CYAN,    COLOR_BLACK);
-        init_pair(6, COLOR_MAGENTA, COLOR_BLACK);
-        init_pair(7, COLOR_WHITE,   COLOR_BLACK);
-    }
+    // Get screen size
+    int stdscr_h, stdscr_w;
+    getmaxyx(stdscr, stdscr_h, stdscr_w);
 
-    int num = 0;
-    int lol;
-    
-    while((lol = getch()) != KEY_F(1)){
-        attrset(COLOR_PAIR(num % 7 +1));
-        printw("TEXTO");
-        //refresh();
-        num++;
-    }
+    // Create GUI struct and save screen size to it
+    GUI_t gui;
+    gui.stdscr_h = stdscr_h;
+    gui.stdscr_w = stdscr_w;
+
+    // Initialize GUI: draw windows, borders and all that
+    initGUI(&gui);
+
+    clientLoop(&gui, connection_fd);
 
     // End ncurses
-    endwin();
+    endNcurses();
     // Free username memory
     free(uname);
     // Close the socket
