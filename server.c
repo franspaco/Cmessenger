@@ -24,12 +24,30 @@ void destroyMsg(msg_t* msg) {
 void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
-    //TODO: create new queue* here
-    msg_t* queue = NULL;
+    // * * * * * * * * * * * * * * IMPORTANT SECTION * * * * * * * * * * * 
+    packet_t packet;
+    readPacket(data->fd, &packet);
 
-    //TODO: add the queue* to the client list
-    long client_id = rw_list_push_back(data->clients, (void**)&queue);
-    printf("[%s][%i] %s %lu\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
+    if(packet.code != C_START){
+        //Erroneous code
+        free(data);
+        pthread_exit(NULL);
+    }
+    sendCode(data->fd, REQ_OK);
+
+    client_data_t client_data;
+    strncpy(client_data.uname, packet.msg, UNAME_LENGTH);
+    printf("[%s][%i] %s %s\n", log_types_strings[INFO], data->id, "USERNAME: ", client_data.uname);
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+
+    //TODO: create new queue* here and add it to client data
+
+    //TODO: add the client data to the client list
+    long client_id = rw_list_push_back(data->clients, (void*)&client_data);
+    printf("[%s][%i] %s %li\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
 
     // Stuff required by poll
     struct pollfd test_fds[1];
@@ -62,46 +80,60 @@ void* attendClient(void* arg) {
         }
         else if (poll_result == 0) {
             // Nothing: check queue
-            if(queue != NULL){
+            if(client_data.element != NULL){
+                // Something to send
                 conn_log(INFO, data, "Sending msg.");
-                char sub_buffer[1024];
-                sprintf(sub_buffer, "%lu %s", queue->source_id, (char*)queue->content);
-                sendString(data->fd, sub_buffer);
-                destroyMsg(queue);
-                queue = NULL;
+                sendCodeIdStr(data->fd, RCV_MSG, client_data.element->source_id, (char*)client_data.element->content);
+                destroyMsg(client_data.element);
+                client_data.element = NULL;
             }
         }
         else {
             // Got a message
-            if(recvString(data->fd, buffer, BUFFER_SIZE) == 0){
-                conn_log(INFO, data, "Client disconnected.");
-                break;
-            }
-            conn_log(INFO, data, "GOT TEXT:");
-            printf("\t%s\n", buffer);
-            long id;
-            msg_t* msg_temp = malloc(sizeof(msg_t));
-            msg_temp->source_id = client_id;
-            msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
-            sscanf(buffer, "%lu %s", &id, msg_temp->content);
+            readPacket(data->fd, &packet);
 
-            void** dest;
-            if(rw_list_find(data->clients, &dest, id)){
-                msg_t** dest_casted = (msg_t**) dest;
-                *dest_casted = msg_temp;
+            if(packet.code == SND_MSG){
+                if(packet.id == -1){
+                    // loopback
+                    sendCodeIdStr(data->fd, RCV_MSG, packet.id, packet.msg);
+                }
+                else{
+                    client_data_t* dest;
+                    if(rw_list_find(data->clients, (void*)&dest, packet.id)){
+                        msg_t* msg_temp = malloc(sizeof(msg_t));
+                        msg_temp->source_id = client_id;
+                        msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
+                        strncpy(msg_temp->content, packet.msg, BUFFER_SIZE);
+                        dest->element = msg_temp;
+                    }
+                    else {
+                        conn_log(ERROR, data, "Sent message to invalid ID.");
+                    }
+                }
             }
-            else {
-                conn_log(ERROR, data, "Sent message to invalid ID.");
+            else if(packet.code == QRY_USR){
+                client_data_t* dest;
+                if(rw_list_find(data->clients, (void*)&dest, packet.id)){
+                    // Usr exists
+                }
+                else{
+                    // Usr not exists
+                }
+            }
+            else{
+                printf("Got: %i\n", packet.code);
             }
         }
     }
+
+    sendCode(data->fd, S_QUIT);
     
     conn_log(INFO, data, "Closing handler.");
 
     // Remove the client from the client list
     rw_list_delete(data->clients, client_id);
     // Free the associated queue
-    free(queue);
+    //free(queue);
     // Free data struct pased on to the thread
     free(data);
     pthread_exit(NULL);

@@ -22,9 +22,12 @@
 #include "fatal_error.h"
 #include "rw_list/rw_list.h"
 
+// UI sizes definitions
 #define LIST_WIDTH 25
 #define TEXTBOX_HEIGHT 5
-#define SOCK_BUFF_SIZE 1024
+
+// Max allowed message length
+//  (Must be smaller than SOCK_BUFF_SIZE !! )
 #define USER_BUFF_SIZE 512
 
 typedef struct chat_struct{

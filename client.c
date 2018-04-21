@@ -230,7 +230,7 @@ void clientLoop(GUI_t* gui, int fd){
             // If error was raised during the polling
             if(poll == -1){
                 //TODO: handle this!
-                continue;
+                break;
             }
             // If nothing happened: poll user and socket again
             else if(poll == 0){
@@ -238,8 +238,23 @@ void clientLoop(GUI_t* gui, int fd){
             }
             // Something was received
             else{
-                //TODO: process incoming
-                continue;
+                packet_t packet;
+                readPacket(fd, &packet);
+                if(packet.code == S_QUIT){
+                    wattron(current->win, COLOR_PAIR(1));
+                    wprintw(current->win, "Server closing connection!\nPress any key to close...\n");
+                    wattroff(current->win, COLOR_PAIR(1));
+                    wrefresh(current->win);
+                    timeout(-1);
+                    getch();
+                    break;
+                }
+                else if(packet.code == RCV_MSG){
+                    wattron(current->win, COLOR_PAIR(1));
+                    wprintw(current->win, "Recv: %li %s\n", packet.id, packet.msg);
+                    wattroff(current->win, COLOR_PAIR(1));
+                    wrefresh(current->win);
+                }
             }
         }
         // F1 key or ESC
@@ -311,10 +326,10 @@ void clientLoop(GUI_t* gui, int fd){
             // If normal send
             if(!new_conn){
                 wattron(current->win, COLOR_PAIR(2));
-                wprintw(current->win, "you: %s\n", buffer);
+                wprintw(current->win, "you: %li %s\n", current->id, buffer);
                 wattroff(current->win, COLOR_PAIR(2));
                 wrefresh(current->win);
-                //TODO: send
+                sendCodeIdStr(fd, SND_MSG, current->id, buffer);
             }
             // If new connection mode
             else {

@@ -14,6 +14,9 @@
 // Posix threads library
 #include <pthread.h>
 
+// Strings
+#include <string.h>
+
 // Custom libraries
 #include "protocol.h"
 #include "sockets.h"
@@ -33,6 +36,11 @@ typedef enum log_types {
     DEBUG,
     ALERT
 } log_t;
+
+typedef struct client_data_struct{
+    char uname[UNAME_LENGTH];
+    msg_t* element;
+}client_data_t;
 
 
 // Public function declaration

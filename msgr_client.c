@@ -1,5 +1,4 @@
 
-
 #include "client.h"
 
 #include <signal.h>
@@ -22,34 +21,27 @@ int main(int argc, char * argv[]){
     char buffer[SOCK_BUFF_SIZE];
 
     int connection_fd;
-    /*
+    
     // Check the correct arguments
     if (argc != 3) {
         usage(argv[0]);
-    }*/
+    }
 
     // Get username
     char* uname = getUsername();
 
-    /*
+    
     // Start the client
     connection_fd = connectSocket(argv[1], argv[2]);
     
     // Send hello message
-    sprintf(buffer, "%i %s", C_START, uname);
-    sendString(connection_fd, buffer);
+    sendCodeStr(connection_fd, C_START, uname);
 
-    // Wait for server response
-    if(!recvString(connection_fd, buffer, SOCK_BUFF_SIZE)){
+    packet_t resp;
+    if(!readPacket(connection_fd, &resp) || resp.code != REQ_OK){
         printf("Could not log in!1\n");
         exit(0);
-    }
-    // If code was not the expected OK -> error and quit
-    if(getCode(buffer) != REQ_OK){
-        printf("Could not log in!2\n");
-        exit(0);
-    }
-    */
+    }  
 
     // Start ncurses
     startNcurses();

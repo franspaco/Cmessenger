@@ -194,8 +194,4 @@ void sendString(int connection_fd, char * buffer) {
 }
 
 
-int getCode(char * msg){
-    int code;
-    sscanf(msg, "%i", &code);
-    return code;
-}
+
