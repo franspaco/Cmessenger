@@ -45,7 +45,6 @@ int find_in_list_by_uname(rw_list_t* chat_list, client_data_t** dest, char* name
 void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
-    // * * * * * * * * * * * * * * IMPORTANT SECTION * * * * * * * * * * * 
     packet_t packet;
     readPacket(data->fd, &packet);
 
@@ -70,8 +69,6 @@ void* attendClient(void* arg) {
     client_data_t client_data;
     strncpy(client_data.uname, packet.msg, UNAME_LENGTH);
     printf("[%s][%i] %s %s\n", log_types_strings[INFO], data->id, "USERNAME: ", client_data.uname);
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 
 
