@@ -9,7 +9,7 @@ set(TEST_CLIENT "msg_test_client")
 set(FATAL_ERROR fatal_error.h fatal_error.c)
 set(SOCKETS sockets.h sockets.c)
 set(RW_LIST rw_list/rw_list.h rw_list/rw_list.c)
-set(UTILS protocol.h structs.h)
+set(UTILS protocol.h protocol.c structs.h)
 
 set(SERVER_SOURCES server.h server.c ${UTILS} ${FATAL_ERROR} ${RW_LIST} ${SOCKETS})
 set(CLIENT_SOURCES client.h client.c ${UTILS} ${FATAL_ERROR} ${RW_LIST} ${SOCKETS})

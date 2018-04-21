@@ -2,10 +2,26 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include "sockets.h"
+
+// Max allowed username length
 #define UNAME_LENGTH 16
 
-// Server 2 client codes
-typedef enum s2c_codes {
+// Max allowed packet size
+#define SOCK_BUFF_SIZE 1024
+
+// Struct to contain info received
+typedef struct packet_struct {
+    int code;
+    long id;
+    char msg[1024];
+} packet_t;
+
+
+typedef enum protocol_struct {
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+///                                   SERVER TO CLIENT
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     /**
      * Last request was OK
      */
@@ -18,7 +34,7 @@ typedef enum s2c_codes {
 
     /**
      * Queried user was found
-     * Trailer: %lu - found user id
+     * Trailer: %li - found user id
      */
     USR_FND,
 
@@ -29,18 +45,19 @@ typedef enum s2c_codes {
 
     /**
      * A message was received.
-     * Trailer: %lu %s - src user id, message content
+     * Trailer: %li %s - src user id, message content
      */
     RCV_MSG,
 
     /**
      * Server is closing
      */
-    S_QUIT
-} s2c_t;
+    S_QUIT,
 
-// Client 2 server codes
-typedef enum c2s_codes {
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+///                                   CLIENT TO SERVER
+/// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
     /**
      * Start new connection
      * Trailer: %s - username (limited to UNAME_LENGTH-1 chars)
@@ -50,7 +67,7 @@ typedef enum c2s_codes {
     /**
      * Query if a user exists.
      * Current:
-     * Trailer: %lu
+     * Trailer: %li
      * 
      * Ideal:
      * Trailer: %s
@@ -59,7 +76,7 @@ typedef enum c2s_codes {
 
     /**
      * Send a message
-     * Trailer: %lu %s - destination id, message content
+     * Trailer: %li %s - destination id, message content
      */
     SND_MSG,
 
@@ -67,7 +84,28 @@ typedef enum c2s_codes {
      * Client is closing
      */
     C_QUIT
-} c2s_t;
+} protocol_t;
+
+/**
+ * Gets data received by the socket, uses protocol to determine how
+ *  to parse it and fills in the packet passed to the function.
+ */
+int readPacket(int connection_fd, packet_t* packet);
+
+/**
+ * Send code
+ */
+void sendCode(int connection_fd, int code);
+
+/**
+ * Send a code followed by a string
+ */
+void sendCodeStr(int connection_fd, int code, char* trailer);
+
+/**
+ * Send a code, and id and a string
+ */
+void sendCodeIdStr(int connection_fd, int code, long id, char* trailer);
 
 
 #endif
