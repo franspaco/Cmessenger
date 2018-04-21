@@ -19,7 +19,7 @@ add_executable("${SERVER}" msgr_server.c ${SERVER_SOURCES})
 target_link_libraries("${SERVER}" pthread)
 
 add_executable("${CLIENT}" msgr_client.c ${CLIENT_SOURCES})
-target_link_libraries("${CLIENT}" pthread ncurses)
+target_link_libraries("${CLIENT}" pthread ncurses panel)
 
 add_executable("${TEST_CLIENT}" msgr_test_client.c ${TEST_CLIENT_SOURCES})
 target_link_libraries("${TEST_CLIENT}" pthread)
