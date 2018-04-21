@@ -40,7 +40,7 @@ typedef enum log_types {
 
 typedef struct client_data_struct{
     char uname[UNAME_LENGTH];
-    msg_t* element;
+    QueueHeader* queue;
 }client_data_t;
 
 
