@@ -8,7 +8,8 @@ typedef struct thread_data{
     int id; // Thread id for debugging purposes
     int fd; // Client file descriptor
     rw_list_t* clients;
-    //TODO: add queue
+    QueueHeader* queue; // Queue of messages
+    
 } tdata_t;
 
 typedef struct message_struct{

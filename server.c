@@ -23,9 +23,7 @@ void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
     //TODO: create new queue* here
-    msg_t* queue = NULL;
-    QueueHeader* q = NULL;
-    q = createQueue();
+    QueueHeader* queue = data->queue;
 
     //TODO: add the queue* to the client list
     long client_id = rw_list_push_back(data->clients, (void**)&queue);
@@ -62,13 +60,13 @@ void* attendClient(void* arg) {
         }
         else if (poll_result == 0) {
             // Nothing: check queue
-            if(queue != NULL){
+            if(queue->head != NULL){
+                msg_t* msg = pop(queue);
                 conn_log(INFO, data, "Sending msg.");
                 char sub_buffer[1024];
-                sprintf(sub_buffer, "%lu %s", queue->source_id, (char*)queue->content);
+                sprintf(sub_buffer, "%lu %s", msg->source_id, (char*)msg->content);
                 sendString(data->fd, sub_buffer);
-                destroyMsg(queue);
-                queue = NULL;
+                destroyMsg(msg);
             }
         }
         else {
@@ -87,8 +85,8 @@ void* attendClient(void* arg) {
 
             void** dest;
             if(rw_list_find(data->clients, &dest, id)){
-                msg_t** dest_casted = (msg_t**) dest;
-                *dest_casted = msg_temp;
+                QueueHeader** dest_queue = (QueueHeader**) dest;
+                push(*dest_queue, msg_temp);
             }
             else {
                 conn_log(ERROR, data, "Sent message to invalid ID.");
@@ -122,7 +120,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
     int client_fd;
     pthread_t new_tid;
     int poll_response;
-	int timeout = 100;		// Time in milliseconds (0.1 seconds)
+    int timeout = 100;      // Time in milliseconds (0.1 seconds)
 
     // Thread id counter for debug purposes
     int next_id = 100;
@@ -131,7 +129,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
     client_address_size = sizeof client_address;
 
     while (!exit_flag) {
-		//// POLL
+        //// POLL
         // Create a structure array to hold the file descriptors to poll
         struct pollfd test_fds[1];
         // Fill in the structure
@@ -140,7 +138,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
         // Check if there is any incomming communication
         poll_response = poll(test_fds, 1, timeout);
 
-		// Error when polling
+        // Error when polling
         if (poll_response == -1) {
             // SIGINT will trigger this
             // errno is checked to make sure it was a signal that got us here and not an error
@@ -154,7 +152,7 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
                 fatalError("poll");
             }
         }
-		// Timeout finished without reading anything
+        // Timeout finished without reading anything
         else if (poll_response == 0) {
             // The exit flag has been activated => stop listening for requests
             if(exit_flag){
@@ -163,27 +161,28 @@ void awaitConnections(int server_fd, rw_list_t* client_list){
             }
             //printf("No response after %d seconds\n", timeout);
         }
-		// There is something ready at the socket
+        // There is something ready at the socket
         else {
             // Check the type of event detected
             if (test_fds[0].revents & POLLIN) {
-				// ACCEPT
-				// Wait for a client connection
-				client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_size);
-				if (client_fd == -1) {
-					fatalError("ERROR: accept");
-				}
-				 
-				// Get the data from the client
-				inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
+                // ACCEPT
+                // Wait for a client connection
+                client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_address_size);
+                if (client_fd == -1) {
+                    fatalError("ERROR: accept");
+                }
+                 
+                // Get the data from the client
+                inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
 
-				// Prepare the structure to send to the thread
+                // Prepare the structure to send to the thread
                 tdata_t* temp_data = malloc(sizeof(tdata_t));
                 temp_data->id = next_id++; // Assign id and increment
                 temp_data->fd = client_fd;
                 temp_data->clients = client_list;
+                temp_data->queue = createQueue();
 
-				// CREATE A THREAD
+                // CREATE A THREAD
                 int status;
                 status = pthread_create(&new_tid, NULL, attendClient, (void*) temp_data);
                 if( status != 0){
