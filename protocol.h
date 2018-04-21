@@ -66,13 +66,15 @@ typedef enum protocol_struct {
 
     /**
      * Query if a user exists.
-     * Current:
-     * Trailer: %li
-     * 
-     * Ideal:
      * Trailer: %s
      */
     QRY_USR,
+
+    /**
+     * Query an ID
+     * Trailer: %li
+     */
+    QRY_USR_ID,
 
     /**
      * Send a message

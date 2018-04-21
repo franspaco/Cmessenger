@@ -21,6 +21,27 @@ void destroyMsg(msg_t* msg) {
     free(msg);
 }
 
+int find_in_list_by_uname(rw_list_t* chat_list, client_data_t** dest, char* name){
+    // Draw list
+    long id;
+    rw_rdlock(chat_list);
+    rw_list_node_t* curr_ptr = chat_list->root;
+    client_data_t* data;
+    while(curr_ptr != NULL){
+        data = (client_data_t*)curr_ptr->data;
+        if(strcmp(data->uname, name) == 0){
+            *dest = data;
+            id = curr_ptr->id;
+            rw_unlock(chat_list);
+            return id;
+        }
+        curr_ptr = curr_ptr->next;
+    }
+    rw_unlock(chat_list);
+    *dest = NULL;
+    return 0;
+}
+
 void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
@@ -30,9 +51,20 @@ void* attendClient(void* arg) {
 
     if(packet.code != C_START){
         //Erroneous code
+        conn_log(INFO, data, "Closing handler: startup error.");
         free(data);
         pthread_exit(NULL);
     }
+
+    client_data_t* dest;
+    if(find_in_list_by_uname(data->clients, &dest, packet.msg) > 0) {
+        // Username is repeated!
+        conn_log(INFO, data, "Closing handler: repeated username.");
+        sendCode(data->fd, REQ_ERR);
+        free(data);
+        pthread_exit(NULL);
+    }
+
     sendCode(data->fd, REQ_OK);
 
     client_data_t client_data;
@@ -92,32 +124,64 @@ void* attendClient(void* arg) {
             // Got a message
             readPacket(data->fd, &packet);
 
-            if(packet.code == SND_MSG){
+            if(packet.code == C_QUIT){
+                break;
+            }
+            else if(packet.code == SND_MSG){
                 if(packet.id == -1){
-                    // loopback
+                    // loopback: send REQ_OK then send msg back
+                    sendCode(data->fd, REQ_OK);
                     sendCodeIdStr(data->fd, RCV_MSG, packet.id, packet.msg);
                 }
                 else{
+                    // Lookup client in list
                     client_data_t* dest;
                     if(rw_list_find(data->clients, (void*)&dest, packet.id)){
+                        // Client found: create msg_t object and add it to queue
                         msg_t* msg_temp = malloc(sizeof(msg_t));
                         msg_temp->source_id = client_id;
                         msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
                         strncpy(msg_temp->content, packet.msg, BUFFER_SIZE);
+
+                        // Add to queue
                         dest->element = msg_temp;
+                        // Inform of success
+                        sendCode(data->fd, REQ_OK);
                     }
                     else {
+                        // Client was not found, inform failure
+                        sendCode(data->fd, REQ_ERR);
                         conn_log(ERROR, data, "Sent message to invalid ID.");
                     }
                 }
             }
             else if(packet.code == QRY_USR){
+                //printf("Looking for: %s\n", packet.msg);
                 client_data_t* dest;
-                if(rw_list_find(data->clients, (void*)&dest, packet.id)){
+                long id;
+                if(strcmp(packet.msg, client_data.uname) == 0){
+                    // No more loopbacks, sorry
+                    sendCode(data->fd, REQ_ERR);
+                }
+                else if((id = find_in_list_by_uname(data->clients, &dest, packet.msg)) != 0){
                     // Usr exists
+                    //printf("Found: %s\n", dest->uname);
+                    sendCodeIdStr(data->fd, USR_FND, id, dest->uname);
                 }
                 else{
                     // Usr not exists
+                    sendCode(data->fd, USR_NFND);
+                }
+            }
+            else if(packet.code == QRY_USR_ID){
+                client_data_t* dest;
+                if(rw_list_find(data->clients, (void**)&dest, packet.id)){
+                    // Usr exists
+                    sendCodeIdStr(data->fd, USR_FND, packet.id, dest->uname);
+                }
+                else{
+                    // Usr not exists
+                    sendCode(data->fd, USR_NFND);
                 }
             }
             else{
@@ -128,7 +192,7 @@ void* attendClient(void* arg) {
 
     sendCode(data->fd, S_QUIT);
     
-    conn_log(INFO, data, "Closing handler.");
+    conn_log(INFO, data, "Closing handler: leaving.");
 
     // Remove the client from the client list
     rw_list_delete(data->clients, client_id);

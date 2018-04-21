@@ -19,6 +19,7 @@ typedef struct node_struct {
 typedef struct list_struct {
     rw_list_node_t* root;
     pthread_rwlock_t rw_lock;
+    long next_id;
 } rw_list_t;
 
 /**

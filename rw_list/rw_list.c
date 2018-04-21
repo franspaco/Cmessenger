@@ -3,14 +3,11 @@
 
 #include <stdio.h>
 
-/**
- * We use an id to identify each unique record
- */
-long next_id;
 
 rw_list_t* rw_list_init(){
     rw_list_t* temp = malloc(sizeof(rw_list_t));
     temp->root = NULL;
+    temp->next_id = 1;
     pthread_rwlock_init(&(temp->rw_lock), NULL);
     return temp;
 }
@@ -18,7 +15,7 @@ rw_list_t* rw_list_init(){
 long rw_list_push_back(rw_list_t* list, TYPE new_data){
     pthread_rwlock_t* lock = &(list->rw_lock);
     rw_list_node_t* new_node = malloc(sizeof(rw_list_node_t));
-    new_node->id = next_id++;
+    new_node->id = list->next_id++;
     new_node->next = NULL;
     new_node->data = new_data;
 

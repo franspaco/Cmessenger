@@ -34,21 +34,25 @@ int readPacket(int connection_fd, packet_t* packet){
     packet->code = code;
     switch(code){
         case RCV_MSG:   // s2c
-            // Trailer: %lu %s
+            // Trailer: %li %s
             sscanf(buffer, "%i %li %[^\n]", &code, &(packet->id), packet->msg);
             break;
         case SND_MSG:   // c2s
-            // Trailer: %lu %s
+            // Trailer: %li %s
             sscanf(buffer, "%i %li %[^\n]", &code, &(packet->id), packet->msg);
             break;
         case QRY_USR:   // c2s
-            // Trailer: (TBD) %lu or %s
-            //sscanf(buffer, "%i %s", &code, packet->msg);
+            // Trailer: %s
+            sscanf(buffer, "%i %s", &code, packet->msg);
+            //sscanf(buffer, "%i %li", &code, &(packet->id));
+            break;
+        case QRY_USR_ID:// c2s
+            // Trailer: %li
             sscanf(buffer, "%i %li", &code, &(packet->id));
             break;
         case USR_FND:   // s2c
-            // Trailer: %lu
-            sscanf(buffer, "%i %li", &code, &(packet->id));
+            // Trailer: %li
+            sscanf(buffer, "%i %li %s", &code, &(packet->id), packet->msg);
             break;
         case C_START:   // c2s
             // Trailer: %s

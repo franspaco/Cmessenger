@@ -48,7 +48,7 @@ chat_t* create_chat(GUI_t* gui, long id, char* name){
 
     temp->panel = new_panel(temp->win);
     temp->id = id;
-    temp->name = name;
+    strncpy(temp->uname, name, UNAME_LENGTH);
     return temp;
 }
 
@@ -61,16 +61,54 @@ void redraw_list(WINDOW* list, rw_list_t* chat_list, int selected){
     while(curr_ptr != NULL){
         if(selected == indx++){
             wattron(list, COLOR_PAIR(1));
-            wprintw(list, "%s<-\n", ((chat_t*)curr_ptr->data)->name);
+            wprintw(list, "%s<-\n", ((chat_t*)curr_ptr->data)->uname);
             wattroff(list, COLOR_PAIR(1));
         }
         else{
-            wprintw(list, "%s\n", ((chat_t*)curr_ptr->data)->name);
+            wprintw(list, "%s\n", ((chat_t*)curr_ptr->data)->uname);
         }
         curr_ptr = curr_ptr->next;
     }
     rw_unlock(chat_list);
     wrefresh(list);
+}
+
+int find_in_list_by_ID(rw_list_t* chat_list, chat_t** dest, long id){
+    // Draw list
+    rw_rdlock(chat_list);
+    rw_list_node_t* curr_ptr = chat_list->root;
+    chat_t* data;
+    while(curr_ptr != NULL){
+        data = (chat_t*)curr_ptr->data;
+        if(data->id == id){
+            *dest = data;
+            rw_unlock(chat_list);
+            return 1;
+        }
+        curr_ptr = curr_ptr->next;
+    }
+    rw_unlock(chat_list);
+    *dest = NULL;
+    return 0;
+}
+
+int find_in_list_by_uname(rw_list_t* chat_list, chat_t** dest, char* name){
+    // Draw list
+    rw_rdlock(chat_list);
+    rw_list_node_t* curr_ptr = chat_list->root;
+    chat_t* data;
+    while(curr_ptr != NULL){
+        data = (chat_t*)curr_ptr->data;
+        if(strcmp(data->uname, name) == 0){
+            *dest = data;
+            rw_unlock(chat_list);
+            return 1;
+        }
+        curr_ptr = curr_ptr->next;
+    }
+    rw_unlock(chat_list);
+    *dest = NULL;
+    return 0;
 }
 
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -176,14 +214,10 @@ void clientLoop(GUI_t* gui, int fd){
 
     rw_list_push_back(chat_list, (void*)loopback);
 
-    // TEST
-    //TODO: REMOVE
-    chat_t* test= create_chat(gui, 0, "test");
-    rw_list_push_back(chat_list, (void*)test);
-
     // User input buffer
     char buffer[USER_BUFF_SIZE];
-    buffer[0] = '\n';
+    bzero(buffer, USER_BUFF_SIZE);
+    buffer[0] = '\0';
     // Next position to store characters in the buffer
     int nextch = 0;
 
@@ -209,6 +243,9 @@ void clientLoop(GUI_t* gui, int fd){
 
     //Draw chat list for the first time
     redraw_list(list, chat_list, selected);
+
+    // Memory for storing incoming packets
+    packet_t packet;
 
     // Start infinite cycle asking for input
     while(1){
@@ -238,7 +275,7 @@ void clientLoop(GUI_t* gui, int fd){
             }
             // Something was received
             else{
-                packet_t packet;
+                packet;
                 readPacket(fd, &packet);
                 if(packet.code == S_QUIT){
                     wattron(current->win, COLOR_PAIR(1));
@@ -250,10 +287,29 @@ void clientLoop(GUI_t* gui, int fd){
                     break;
                 }
                 else if(packet.code == RCV_MSG){
-                    wattron(current->win, COLOR_PAIR(1));
-                    wprintw(current->win, "Recv: %li %s\n", packet.id, packet.msg);
-                    wattroff(current->win, COLOR_PAIR(1));
-                    wrefresh(current->win);
+                    chat_t* found_chat;
+                    if(find_in_list_by_ID(chat_list, &found_chat, packet.id)){
+                        wattron(found_chat->win, COLOR_PAIR(7));
+                        wprintw(found_chat->win, "%s: %s\n", found_chat->uname, packet.msg);
+                        wattroff(found_chat->win, COLOR_PAIR(7));
+                        wrefresh(found_chat->win);
+                    }
+                    else{
+                        sendCodeIdStr(fd, QRY_USR_ID, packet.id, "");
+                        packet_t new_chat_pkt;
+                        readPacket(fd, &new_chat_pkt);
+                        if(new_chat_pkt.code == USR_FND){
+                            chat_t* new_chat = create_chat(gui, packet.id, new_chat_pkt.msg);
+                            rw_list_push_back(chat_list, (void*)new_chat);
+                            wattron(new_chat->win, COLOR_PAIR(7));
+                            wprintw(new_chat->win, "%s: %s\n", new_chat->uname, packet.msg);
+                            wattroff(new_chat->win, COLOR_PAIR(7));
+                            wrefresh(new_chat->win);
+                            top_panel(current->panel);
+                            update_panels();
+                            doupdate();
+                        }
+                    }
                 }
             }
         }
@@ -324,12 +380,19 @@ void clientLoop(GUI_t* gui, int fd){
         // Check if input is ENTER
         else if(ch == 10){
             // If normal send
-            if(!new_conn){
+            if(!new_conn && nextch > 0){
                 wattron(current->win, COLOR_PAIR(2));
-                wprintw(current->win, "you: %li %s\n", current->id, buffer);
+                wprintw(current->win, "you: %s\n", buffer);
                 wattroff(current->win, COLOR_PAIR(2));
                 wrefresh(current->win);
                 sendCodeIdStr(fd, SND_MSG, current->id, buffer);
+                readPacket(fd, &packet);
+                if(packet.code == REQ_ERR){
+                    wattron(current->win, COLOR_PAIR(1));
+                    wprintw(current->win, "Server: Client has disconencted!\n");
+                    wattroff(current->win, COLOR_PAIR(1));
+                    wrefresh(current->win);
+                }
             }
             // If new connection mode
             else {
@@ -337,6 +400,16 @@ void clientLoop(GUI_t* gui, int fd){
                 // Restore the box
                 box(gui->input.border, 0 , 0);
                 wrefresh(gui->input.border);
+                chat_t* found_chat;
+                if(!find_in_list_by_uname(chat_list, &found_chat, buffer)){
+                    sendCodeStr(fd, QRY_USR, buffer);
+                    packet_t new_chat_pkt;
+                    readPacket(fd, &new_chat_pkt);
+                    if(new_chat_pkt.code == USR_FND){
+                        chat_t* new_chat = create_chat(gui, new_chat_pkt.id, new_chat_pkt.msg);
+                        rw_list_push_back(chat_list, (void*)new_chat);
+                    }
+                }
             }
             buffer[0] = '\0';
             nextch = 0;
@@ -350,6 +423,7 @@ void clientLoop(GUI_t* gui, int fd){
         //Draw list
         redraw_list(list, chat_list, selected);
     }
+    sendCode(fd, C_QUIT);
     free(loopback);
     free(chat_list);
 }

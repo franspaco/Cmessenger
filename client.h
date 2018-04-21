@@ -11,6 +11,7 @@
 #include <panel.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <string.h>
 // Sockets libraries
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -34,7 +35,7 @@ typedef struct chat_struct{
     WINDOW* win;
     PANEL* panel;
     long id;
-    char* name;
+    char uname[UNAME_LENGTH];
 } chat_t;
 
 typedef struct window_with_border{

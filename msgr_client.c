@@ -38,34 +38,38 @@ int main(int argc, char * argv[]){
     sendCodeStr(connection_fd, C_START, uname);
 
     packet_t resp;
-    if(!readPacket(connection_fd, &resp) || resp.code != REQ_OK){
-        printf("Could not log in!1\n");
+    if(!readPacket(connection_fd, &resp)){
+        printf("Could not log in!\n");
         exit(0);
-    }  
+    }
+    else if(resp.code != REQ_OK){
+        printf("Error!\nUsername taken!\n");
+        exit(0);
+    }else{
+        // Start ncurses
+        startNcurses();
 
-    // Start ncurses
-    startNcurses();
+        // Get screen size
+        int stdscr_h, stdscr_w;
+        getmaxyx(stdscr, stdscr_h, stdscr_w);
 
-    // Get screen size
-    int stdscr_h, stdscr_w;
-    getmaxyx(stdscr, stdscr_h, stdscr_w);
+        // Create GUI struct and save screen size to it
+        GUI_t gui;
+        gui.stdscr_h = stdscr_h;
+        gui.stdscr_w = stdscr_w;
 
-    // Create GUI struct and save screen size to it
-    GUI_t gui;
-    gui.stdscr_h = stdscr_h;
-    gui.stdscr_w = stdscr_w;
+        // Initialize GUI: draw windows, borders and all that
+        initGUI(&gui);
 
-    // Initialize GUI: draw windows, borders and all that
-    initGUI(&gui);
+        clientLoop(&gui, connection_fd);
 
-    clientLoop(&gui, connection_fd);
-
-    // End ncurses
-    endNcurses();
+        // End ncurses
+        endNcurses();
+    }
     // Free username memory
     free(uname);
     // Close the socket
-    //close(connection_fd);
+    close(connection_fd);
     return 0;
 }
 
