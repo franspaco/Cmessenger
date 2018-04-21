@@ -292,7 +292,9 @@ void clientLoop(GUI_t* gui, int fd){
                         wattron(found_chat->win, COLOR_PAIR(7));
                         wprintw(found_chat->win, "%s: %s\n", found_chat->uname, packet.msg);
                         wattroff(found_chat->win, COLOR_PAIR(7));
-                        wrefresh(found_chat->win);
+                        if(current->id == found_chat->id){
+                            wrefresh(current->win);
+                        }
                     }
                     else{
                         sendCodeIdStr(fd, QRY_USR_ID, packet.id, "");
@@ -304,10 +306,6 @@ void clientLoop(GUI_t* gui, int fd){
                             wattron(new_chat->win, COLOR_PAIR(7));
                             wprintw(new_chat->win, "%s: %s\n", new_chat->uname, packet.msg);
                             wattroff(new_chat->win, COLOR_PAIR(7));
-                            wrefresh(new_chat->win);
-                            top_panel(current->panel);
-                            update_panels();
-                            doupdate();
                         }
                     }
                 }
