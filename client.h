@@ -10,6 +10,7 @@
 #include <curses.h>
 #include <panel.h>
 #include <pthread.h>
+#include <ctype.h>
 // Sockets libraries
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -24,13 +25,14 @@
 #define LIST_WIDTH 25
 #define TEXTBOX_HEIGHT 5
 #define SOCK_BUFF_SIZE 1024
+#define USER_BUFF_SIZE 512
 
-typedef struct content_struct{
-    pthread_mutex_t lock;
+typedef struct chat_struct{
+    WINDOW* win;
     PANEL* panel;
     long id;
-    //TODO: more?
-} content_t;
+    char* name;
+} chat_t;
 
 typedef struct window_with_border{
     WINDOW* border;

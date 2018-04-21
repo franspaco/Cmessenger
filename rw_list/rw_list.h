@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 // Must be a pointer
-#define TYPE void**
+#define TYPE void*
 
 typedef struct node_struct {
     long id;
@@ -51,9 +51,34 @@ int rw_list_length(rw_list_t* list);
 
 /**
  * Frees all the nodes in a list and the list itself
- * Does NOT free the data pointers
+ * Depending on value passed as 2nd argument it will:
+ * 0 - clear thew list only
+ * 1 - clear the list AND free the data
  */
-void rw_list_clear(rw_list_t* list);
+void rw_list_clear(rw_list_t* list, int free_data);
 
+
+/**
+ * Get element at a certain index
+ * Not fit for iteration on multi-threaded programs
+ * Returns 1 on success
+ * Returns 0 on failure
+ */
+int rw_list_get_element(rw_list_t* list, TYPE* dest, int index);
+
+/**
+ * Crete a new read-lock on the list.
+ * Useful for iterating outside of the list
+ * WARNING: the lock must be MANUALLY released 
+ * for writing to occur.
+ */
+void rw_rdlock(rw_list_t* list);
+
+/**
+ * Allows to externally unlock a list.
+ * Only use if the list was externally locked
+ * for reading!
+ */
+void rw_unlock(rw_list_t* list);
 
 #endif

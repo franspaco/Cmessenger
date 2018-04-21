@@ -90,7 +90,7 @@ int rw_list_find(rw_list_t* list, TYPE* dest, long id){
         curr_ptr = curr_ptr->next;
     }
     pthread_rwlock_unlock(lock);
-    dest = NULL;
+    *dest = NULL;
     return 0;
 }
 
@@ -107,6 +107,33 @@ int rw_list_length(rw_list_t* list){
     return len;
 }
 
-void rw_list_clear(rw_list_t* list){
+void rw_list_clear(rw_list_t* list, int free_data){
 
+}
+
+int rw_list_get_element(rw_list_t* list, TYPE* dest, int index){
+    int len = 0;
+    pthread_rwlock_t* lock = &(list->rw_lock);
+    pthread_rwlock_rdlock(lock);
+    rw_list_node_t* curr_ptr = list->root;
+    while(curr_ptr != NULL){
+        if(len == index){
+            *dest = curr_ptr->data;
+            pthread_rwlock_unlock(lock);
+            return 1;
+        }
+        len++;
+        curr_ptr = curr_ptr->next;
+    }
+    pthread_rwlock_unlock(lock);
+    *dest = NULL;
+    return 0;
+}
+
+void rw_rdlock(rw_list_t* list){
+    pthread_rwlock_rdlock(&(list->rw_lock));
+}
+
+void rw_unlock(rw_list_t* list){
+    pthread_rwlock_unlock(&(list->rw_lock));
 }
