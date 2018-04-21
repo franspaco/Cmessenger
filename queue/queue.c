@@ -20,17 +20,9 @@ QueueHeader* createQueue() {
 }
 
 /*
- * Destroys the queue pointer.
- */
-void destroy(struct QueueHeader *header) {
-  free(header);
-  header = NULL;
-}
-
-/*
  * Pushes an element to the queue in a thread-safe way.
  */
-void push(struct QueueHeader *header, void *elem) {
+void q_push(struct QueueHeader *header, void *elem) {
   // Create new element
   QueueElem *element = malloc(sizeof(*element));
   element->value = elem;
@@ -54,7 +46,7 @@ void push(struct QueueHeader *header, void *elem) {
 /*
  * Dequeues an element from the queue
  */
-void* pop(struct QueueHeader *header) {
+void* q_pop(struct QueueHeader *header) {
   pthread_mutex_lock(&(header->mutex));
   QueueElem *head = header->head;
 

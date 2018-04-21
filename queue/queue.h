@@ -16,7 +16,7 @@ typedef struct QueueHeader {
 } QueueHeader;
 
 QueueHeader* createQueue();
-void push(struct QueueHeader *header, void *elem);
-void* pop(struct QueueHeader *header);
+void q_push(struct QueueHeader *header, void *elem);
+void* q_pop(struct QueueHeader *header);
 
 #endif
