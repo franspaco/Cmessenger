@@ -52,6 +52,27 @@ chat_t* create_chat(GUI_t* gui, long id, char* name){
     return temp;
 }
 
+void redraw_list(WINDOW* list, rw_list_t* chat_list, int selected){
+    // Draw list
+    int indx = 0;
+    wclear(list);
+    rw_rdlock(chat_list);
+    rw_list_node_t* curr_ptr = chat_list->root;
+    while(curr_ptr != NULL){
+        if(selected == indx++){
+            wattron(list, COLOR_PAIR(1));
+            wprintw(list, "%s<-\n", ((chat_t*)curr_ptr->data)->name);
+            wattroff(list, COLOR_PAIR(1));
+        }
+        else{
+            wprintw(list, "%s\n", ((chat_t*)curr_ptr->data)->name);
+        }
+        curr_ptr = curr_ptr->next;
+    }
+    rw_unlock(chat_list);
+    wrefresh(list);
+}
+
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                                   PUBLIC FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -186,8 +207,12 @@ void clientLoop(GUI_t* gui, int fd){
     //  thus, allowing us to easily poll the socket
     timeout(50);
 
+    //Draw chat list for the first time
+    redraw_list(list, chat_list, selected);
+
     // Start infinite cycle asking for input
     while(1){
+
         ch = getch();
 
         // Get length of list
@@ -307,21 +332,8 @@ void clientLoop(GUI_t* gui, int fd){
             // ?
         }
 
-        // Draw panels
-        //chat_t* current == NULL;
-        /*if(rw_list_get_element(chat_list, (void*)&current, selected)){
-            //top_panel(current->panel);
-            //update_panels();
-            //doupdate();
-        }*/
-
-        // Draw list
-        wclear(list);
-        wprintw(list, "%i - %i", selected, rw_list_length(chat_list));
-        wrefresh(list);
-        //rw_rdlock();
-        //TODO: draw list
-
+        //Draw list
+        redraw_list(list, chat_list, selected);
     }
     free(loopback);
     free(chat_list);
