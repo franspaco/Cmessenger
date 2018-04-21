@@ -318,6 +318,10 @@ void clientLoop(GUI_t* gui, int fd){
                             wattroff(new_chat->win, COLOR_PAIR(7));
                         }
                     }
+                    // Make sure top panel is drawn
+                    top_panel(current->panel);
+                    update_panels();
+                    doupdate();
                 }
             }
         }
