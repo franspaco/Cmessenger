@@ -45,7 +45,10 @@ int find_in_list_by_uname(rw_list_t* chat_list, client_data_t** dest, char* name
 void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
+    // Create a packet
     packet_t packet;
+
+    // Read incomming message into packet
     readPacket(data->fd, &packet);
 
     if(packet.code != C_START){
@@ -63,7 +66,7 @@ void* attendClient(void* arg) {
         free(data);
         pthread_exit(NULL);
     }
-
+    // Tell client their login request was OK
     sendCode(data->fd, REQ_OK);
 
     client_data_t client_data;
@@ -71,10 +74,10 @@ void* attendClient(void* arg) {
     printf("[%s][%i] %s %s\n", log_types_strings[INFO], data->id, "USERNAME: ", client_data.uname);
 
 
+    // Create thread queue and bundle it in client_data
+    QueueHeader* queue = createQueue();
+    client_data.queue = queue;
 
-    //TODO: create new queue* here and add it to client data
-
-    //TODO: add the client data to the client list
     long client_id = rw_list_push_back(data->clients, (void*)&client_data);
     printf("[%s][%i] %s %li\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
 
@@ -108,13 +111,13 @@ void* attendClient(void* arg) {
             }
         }
         else if (poll_result == 0) {
-            // Nothing: check queue
-            if(client_data.element != NULL){
-                // Something to send
+            // Nothing: check queue and empty it
+            msg_t* ptr;
+            while((ptr = (msg_t*)q_pop(queue)) != NULL){
+                // Something was found!
                 conn_log(INFO, data, "Sending msg.");
-                sendCodeIdStr(data->fd, RCV_MSG, client_data.element->source_id, (char*)client_data.element->content);
-                destroyMsg(client_data.element);
-                client_data.element = NULL;
+                sendCodeIdStr(data->fd, RCV_MSG, ptr->source_id, ptr->content);
+                destroyMsg(ptr);
             }
         }
         else {
@@ -141,7 +144,8 @@ void* attendClient(void* arg) {
                         strncpy(msg_temp->content, packet.msg, BUFFER_SIZE);
 
                         // Add to queue
-                        dest->element = msg_temp;
+                        q_push(dest->queue, (void*)msg_temp);
+
                         // Inform of success
                         sendCode(data->fd, REQ_OK);
                     }
@@ -192,9 +196,19 @@ void* attendClient(void* arg) {
     conn_log(INFO, data, "Closing handler: leaving.");
 
     // Remove the client from the client list
+    //  No other thread will be able to find it now,
+    //  So we can delete everything.
     rw_list_delete(data->clients, client_id);
+
+    // Purge queue for anything that might still be there
+    msg_t* ptr;
+    while((ptr = (msg_t*)q_pop(queue)) != NULL){
+        destroyMsg(ptr);
+    }
+
     // Free the associated queue
-    //free(queue);
+    free(queue);
+
     // Free data struct pased on to the thread
     free(data);
     pthread_exit(NULL);
