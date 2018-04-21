@@ -38,11 +38,6 @@ typedef enum log_types {
     ALERT
 } log_t;
 
-typedef struct client_data_struct{
-    char uname[UNAME_LENGTH];
-    QueueHeader* queue;
-}client_data_t;
-
 
 // Public function declaration
 

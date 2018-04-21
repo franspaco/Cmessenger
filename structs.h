@@ -3,6 +3,7 @@
 #define STRUCTS_H
 
 #include "rw_list/rw_list.h"
+#include "queue/queue.h"
 
 typedef struct thread_data{
     int id; // Thread id for debugging purposes
@@ -15,6 +16,11 @@ typedef struct message_struct{
     long source_id;
     char* content;
 } msg_t;
+
+typedef struct client_data_struct{
+    char uname[UNAME_LENGTH];
+    QueueHeader* queue;
+}client_data_t;
 
 
 #endif
