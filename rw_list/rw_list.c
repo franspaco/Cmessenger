@@ -105,7 +105,20 @@ int rw_list_length(rw_list_t* list){
 }
 
 void rw_list_clear(rw_list_t* list, int free_data){
-
+    pthread_rwlock_t* lock = &(list->rw_lock);
+    pthread_rwlock_wrlock(lock);
+    rw_list_node_t* current = list->root;
+    rw_list_node_t* next_ptr = NULL;
+    while(current != NULL){
+        next_ptr = current->next;
+        if(free_data){
+            free(current->data);
+        }
+        free(current);
+        current = next_ptr;
+    }
+    list->root = NULL;
+    pthread_rwlock_unlock(lock);
 }
 
 int rw_list_get_element(rw_list_t* list, TYPE* dest, int index){
