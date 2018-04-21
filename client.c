@@ -1,6 +1,8 @@
 
 #include "client.h"
 
+int exit_flag = 0;
+
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                               PRIVATE FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -115,13 +117,17 @@ int find_in_list_by_uname(rw_list_t* chat_list, chat_t** dest, char* name){
 ///                                   PUBLIC FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+void activate_exit_flag(){
+    exit_flag = 1;
+}
+
 void purgeStdin(){
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
 char* getUsername(){
-    printf("Write your username: (max 10 characters)\n");
+    printf("Write your username: (max 10 characters, no spaces!)\n");
     char* uname = malloc(UNAME_LENGTH*sizeof(char));
     fgets(uname, UNAME_LENGTH, stdin);
     return uname;
@@ -248,7 +254,7 @@ void clientLoop(GUI_t* gui, int fd){
     packet_t packet;
 
     // Start infinite cycle asking for input
-    while(1){
+    while(!exit_flag){
 
         ch = getch();
 
@@ -275,8 +281,9 @@ void clientLoop(GUI_t* gui, int fd){
             }
             // Something was received
             else{
-                packet;
+                // Read incomming packet
                 readPacket(fd, &packet);
+                // If server quitting
                 if(packet.code == S_QUIT){
                     wattron(current->win, COLOR_PAIR(1));
                     wprintw(current->win, "Server closing connection!\nPress any key to close...\n");
@@ -286,8 +293,10 @@ void clientLoop(GUI_t* gui, int fd){
                     getch();
                     break;
                 }
+                // If msg received
                 else if(packet.code == RCV_MSG){
                     chat_t* found_chat;
+                    // If chat with that is already exists
                     if(find_in_list_by_ID(chat_list, &found_chat, packet.id)){
                         wattron(found_chat->win, COLOR_PAIR(7));
                         wprintw(found_chat->win, "%s: %s\n", found_chat->uname, packet.msg);
@@ -296,6 +305,7 @@ void clientLoop(GUI_t* gui, int fd){
                             wrefresh(current->win);
                         }
                     }
+                    // No local chat exists: create new one
                     else{
                         sendCodeIdStr(fd, QRY_USR_ID, packet.id, "");
                         packet_t new_chat_pkt;
@@ -421,7 +431,13 @@ void clientLoop(GUI_t* gui, int fd){
         //Draw list
         redraw_list(list, chat_list, selected);
     }
+    // Send quitting code
     sendCode(fd, C_QUIT);
-    free(loopback);
+
+    // Clear list, the 1 means it will free al associated data
+    //  This means all chats including loopback
+    rw_list_clear(chat_list, 1);
+
+    // Free the list itself
     free(chat_list);
 }
