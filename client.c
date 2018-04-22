@@ -306,9 +306,9 @@ void clientLoop(GUI_t* gui, int fd){
                     chat_t* found_chat;
                     // If chat with that is already exists
                     if(find_in_list_by_ID(chat_list, &found_chat, packet.id)){
-                        wattron(found_chat->win, COLOR_PAIR(7));
+                        wattron(found_chat->win, COLOR_PAIR(2));
                         wprintw(found_chat->win, "%s: %s\n", found_chat->uname, packet.msg);
-                        wattroff(found_chat->win, COLOR_PAIR(7));
+                        wattroff(found_chat->win, COLOR_PAIR(2));
                         if(current->id == found_chat->id){
                             wrefresh(current->win);
                         }
@@ -321,9 +321,9 @@ void clientLoop(GUI_t* gui, int fd){
                         if(new_chat_pkt.code == USR_FND){
                             chat_t* new_chat = create_chat(gui, packet.id, new_chat_pkt.msg);
                             rw_list_push_back(chat_list, (void*)new_chat);
-                            wattron(new_chat->win, COLOR_PAIR(7));
+                            wattron(new_chat->win, COLOR_PAIR(2));
                             wprintw(new_chat->win, "%s: %s\n", new_chat->uname, packet.msg);
-                            wattroff(new_chat->win, COLOR_PAIR(7));
+                            wattroff(new_chat->win, COLOR_PAIR(2));
                         }
                     }
                     // Make sure top panel is drawn
@@ -401,9 +401,9 @@ void clientLoop(GUI_t* gui, int fd){
         else if(ch == 10){
             // If normal send
             if(!new_conn && nextch > 0){
-                wattron(current->win, COLOR_PAIR(2));
+                wattron(current->win, COLOR_PAIR(5));
                 wprintw(current->win, "you: %s\n", buffer);
-                wattroff(current->win, COLOR_PAIR(2));
+                wattroff(current->win, COLOR_PAIR(5));
                 wrefresh(current->win);
                 sendCodeIdStr(fd, SND_MSG, current->id, buffer);
                 readPacket(fd, &packet);
