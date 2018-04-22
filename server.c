@@ -124,6 +124,8 @@ void* attendClient(void* arg) {
         else {
             // Reset packet
             packet.code = -1;
+            packet.id = -1;
+            packet.msg[0] = '\0';
 
             // Read message
             if(!readPacket(data->fd, &packet)){
@@ -131,6 +133,8 @@ void* attendClient(void* arg) {
                 conn_log(INFO, data, "Closing handler: disconencted.");
                 break;
             }
+
+            printf("[%s][%i] %s %i %li %s\n", log_types_strings[INFO], data->id, "Request: ", packet.code, packet.id, packet.msg);
 
             if(packet.code == C_QUIT){
                 conn_log(INFO, data, "Closing handler: leaving.");
