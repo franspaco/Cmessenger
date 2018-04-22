@@ -65,5 +65,7 @@ void clientLoop(GUI_t* gui, int fd);
 void purgeStdin();
 char* getUsername();
 
+void activateExitFlag();
+
 
 #endif

@@ -116,8 +116,7 @@ int find_in_list_by_uname(rw_list_t* chat_list, chat_t** dest, char* name){
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                                   PUBLIC FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-void activate_exit_flag(){
+void activateExitFlag(){
     exit_flag = 1;
 }
 

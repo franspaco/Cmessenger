@@ -3,18 +3,8 @@
 
 #include <signal.h>
 
-static void finish(int sig);
-
 void usage(char * program);
-
-static void finish(int sig)
-{
-    endwin();
-
-    /* do your non-curses wrapup here */
-
-    exit(0);
-}
+void exitHandler(int signal);
 
 int main(int argc, char * argv[]){
 
@@ -46,6 +36,9 @@ int main(int argc, char * argv[]){
         printf("Error!\nUsername taken!\n");
         exit(0);
     }else{
+        //Setup sigint handler
+        signal(SIGINT, exitHandler);
+
         // Start ncurses
         startNcurses();
 
@@ -81,4 +74,11 @@ void usage(char * program)
     printf("Usage:\n");
     printf("\t%s {server_address} {port_number}\n", program);
     exit(EXIT_FAILURE);
+}
+
+/**
+ * SIGINT handler
+ */
+void exitHandler(int signal){
+    activateExitFlag();
 }
