@@ -41,7 +41,7 @@ int deleteLast(WINDOW* win){
 
 chat_t* create_chat(GUI_t* gui, long id, char* name){
     chat_t* temp = malloc(sizeof(chat_t));
-    temp->win = create_win(gui->stdscr_w - LIST_WIDTH - 2, gui->stdscr_h - TEXTBOX_HEIGHT - 2, LIST_WIDTH + 1, 0 + 1);
+    temp->win = create_win(gui->stdscr_w - LIST_WIDTH - 2, gui->stdscr_h - TEXTBOX_HEIGHT - 3, LIST_WIDTH + 1, 0 + 1);
     // Activate scroll lock on win
     scrollok(temp->win, TRUE);
     // Clear screen
@@ -181,12 +181,17 @@ void initGUI(GUI_t* gui){
     int stdscr_h = gui->stdscr_h;
     int stdscr_w = gui->stdscr_w;
 
+    attron(COLOR_PAIR(3));
+    mvprintw(stdscr_h -1, 0, "  F1 - Exit   |  F4 - Start new chat  |  UP/DN keys - change chat");
+    attroff(COLOR_PAIR(3));
+    refresh();
+
     // Make border and content boxes for input and list
-    init_win_box(&(gui->input), stdscr_w - LIST_WIDTH, TEXTBOX_HEIGHT, LIST_WIDTH, LINES - TEXTBOX_HEIGHT);
-    init_win_box(&(gui->list), LIST_WIDTH, stdscr_h, 0, 0);
+    init_win_box(&(gui->input), stdscr_w - LIST_WIDTH, TEXTBOX_HEIGHT, LIST_WIDTH, LINES - TEXTBOX_HEIGHT - 1);
+    init_win_box(&(gui->list), LIST_WIDTH, stdscr_h - 1, 0, 0);
 
     // Create just the border
-    gui->content_box = create_win_box(stdscr_w - LIST_WIDTH, stdscr_h - TEXTBOX_HEIGHT, LIST_WIDTH, 0);
+    gui->content_box = create_win_box(stdscr_w - LIST_WIDTH, stdscr_h - TEXTBOX_HEIGHT - 1, LIST_WIDTH, 0);
 
     // Activate scroll lock on input
     scrollok(gui->input.content, TRUE);
