@@ -120,11 +120,20 @@ void* attendClient(void* arg) {
                 destroyMsg(ptr);
             }
         }
+        // Got a message
         else {
-            // Got a message
-            readPacket(data->fd, &packet);
+            // Reset packet
+            packet.code = -1;
+
+            // Read message
+            if(!readPacket(data->fd, &packet)){
+                // Socket closed :(
+                conn_log(INFO, data, "Closing handler: disconencted.");
+                break;
+            }
 
             if(packet.code == C_QUIT){
+                conn_log(INFO, data, "Closing handler: leaving.");
                 break;
             }
             else if(packet.code == SND_MSG){
@@ -191,9 +200,11 @@ void* attendClient(void* arg) {
         }
     }
 
-    sendCode(data->fd, S_QUIT);
-    
-    conn_log(INFO, data, "Closing handler: leaving.");
+    if(exit_flag){
+        // Notify clients of exit flag
+        sendCode(data->fd, S_QUIT);
+        conn_log(INFO, data, "Closing handler: exit flag.");
+    }
 
     // Remove the client from the client list
     //  No other thread will be able to find it now,
