@@ -1,5 +1,4 @@
 
-
 #include "server.h"
 
 // Basic Functions

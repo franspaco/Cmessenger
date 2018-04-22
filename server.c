@@ -21,15 +21,65 @@ void destroyMsg(msg_t* msg) {
     free(msg);
 }
 
+int find_in_list_by_uname(rw_list_t* chat_list, client_data_t** dest, char* name){
+    // Draw list
+    long id;
+    rw_rdlock(chat_list);
+    rw_list_node_t* curr_ptr = chat_list->root;
+    client_data_t* data;
+    while(curr_ptr != NULL){
+        data = (client_data_t*)curr_ptr->data;
+        if(strcmp(data->uname, name) == 0){
+            *dest = data;
+            id = curr_ptr->id;
+            rw_unlock(chat_list);
+            return id;
+        }
+        curr_ptr = curr_ptr->next;
+    }
+    rw_unlock(chat_list);
+    *dest = NULL;
+    return 0;
+}
+
 void* attendClient(void* arg) {
     tdata_t* data = (tdata_t*) arg;
 
-    //TODO: create new queue* here
-    msg_t* queue = NULL;
+    // Create a packet
+    packet_t packet;
 
-    //TODO: add the queue* to the client list
-    long client_id = rw_list_push_back(data->clients, (void**)&queue);
-    printf("[%s][%i] %s %lu\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
+    // Read incomming message into packet
+    readPacket(data->fd, &packet);
+
+    if(packet.code != C_START){
+        //Erroneous code
+        conn_log(INFO, data, "Closing handler: startup error.");
+        free(data);
+        pthread_exit(NULL);
+    }
+
+    client_data_t* dest;
+    if(find_in_list_by_uname(data->clients, &dest, packet.msg) > 0) {
+        // Username is repeated!
+        conn_log(INFO, data, "Closing handler: repeated username.");
+        sendCode(data->fd, REQ_ERR);
+        free(data);
+        pthread_exit(NULL);
+    }
+    // Tell client their login request was OK
+    sendCode(data->fd, REQ_OK);
+
+    client_data_t client_data;
+    strncpy(client_data.uname, packet.msg, UNAME_LENGTH);
+    printf("[%s][%i] %s %s\n", log_types_strings[INFO], data->id, "USERNAME: ", client_data.uname);
+
+
+    // Create thread queue and bundle it in client_data
+    QueueHeader* queue = createQueue();
+    client_data.queue = queue;
+
+    long client_id = rw_list_push_back(data->clients, (void*)&client_data);
+    printf("[%s][%i] %s %li\n", log_types_strings[INFO], data->id, "GOT ID:", client_id);
 
     // Stuff required by poll
     struct pollfd test_fds[1];
@@ -61,47 +111,115 @@ void* attendClient(void* arg) {
             }
         }
         else if (poll_result == 0) {
-            // Nothing: check queue
-            if(queue != NULL){
+            // Nothing: check queue and empty it
+            msg_t* ptr;
+            while((ptr = (msg_t*)q_pop(queue)) != NULL){
+                // Something was found!
                 conn_log(INFO, data, "Sending msg.");
-                char sub_buffer[1024];
-                sprintf(sub_buffer, "%lu %s", queue->source_id, (char*)queue->content);
-                sendString(data->fd, sub_buffer);
-                destroyMsg(queue);
-                queue = NULL;
+                sendCodeIdStr(data->fd, RCV_MSG, ptr->source_id, ptr->content);
+                destroyMsg(ptr);
             }
         }
+        // Got a message
         else {
-            // Got a message
-            if(recvString(data->fd, buffer, BUFFER_SIZE) == 0){
-                conn_log(INFO, data, "Client disconnected.");
+            // Reset packet
+            packet.code = -1;
+
+            // Read message
+            if(!readPacket(data->fd, &packet)){
+                // Socket closed :(
+                conn_log(INFO, data, "Closing handler: disconencted.");
                 break;
             }
-            conn_log(INFO, data, "GOT TEXT:");
-            printf("\t%s\n", buffer);
-            long id;
-            msg_t* msg_temp = malloc(sizeof(msg_t));
-            msg_temp->source_id = client_id;
-            msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
-            sscanf(buffer, "%lu %s", &id, msg_temp->content);
 
-            void** dest;
-            if(rw_list_find(data->clients, &dest, id)){
-                msg_t** dest_casted = (msg_t**) dest;
-                *dest_casted = msg_temp;
+            if(packet.code == C_QUIT){
+                conn_log(INFO, data, "Closing handler: leaving.");
+                break;
             }
-            else {
-                conn_log(ERROR, data, "Sent message to invalid ID.");
+            else if(packet.code == SND_MSG){
+                if(packet.id == -1){
+                    // loopback: send REQ_OK then send msg back
+                    sendCode(data->fd, REQ_OK);
+                    sendCodeIdStr(data->fd, RCV_MSG, packet.id, packet.msg);
+                }
+                else{
+                    // Lookup client in list
+                    client_data_t* dest;
+                    if(rw_list_find(data->clients, (void*)&dest, packet.id)){
+                        // Client found: create msg_t object and add it to queue
+                        msg_t* msg_temp = malloc(sizeof(msg_t));
+                        msg_temp->source_id = client_id;
+                        msg_temp->content = malloc(BUFFER_SIZE * sizeof(char));
+                        strncpy(msg_temp->content, packet.msg, BUFFER_SIZE);
+
+                        // Add to queue
+                        q_push(dest->queue, (void*)msg_temp);
+
+                        // Inform of success
+                        sendCode(data->fd, REQ_OK);
+                    }
+                    else {
+                        // Client was not found, inform failure
+                        sendCode(data->fd, REQ_ERR);
+                        conn_log(ERROR, data, "Sent message to invalid ID.");
+                    }
+                }
+            }
+            else if(packet.code == QRY_USR){
+                //printf("Looking for: %s\n", packet.msg);
+                client_data_t* dest;
+                long id;
+                if(strcmp(packet.msg, client_data.uname) == 0){
+                    // No more loopbacks, sorry
+                    sendCode(data->fd, REQ_ERR);
+                }
+                else if((id = find_in_list_by_uname(data->clients, &dest, packet.msg)) != 0){
+                    // Usr exists
+                    //printf("Found: %s\n", dest->uname);
+                    sendCodeIdStr(data->fd, USR_FND, id, dest->uname);
+                }
+                else{
+                    // Usr not exists
+                    sendCode(data->fd, USR_NFND);
+                }
+            }
+            else if(packet.code == QRY_USR_ID){
+                client_data_t* dest;
+                if(rw_list_find(data->clients, (void**)&dest, packet.id)){
+                    // Usr exists
+                    sendCodeIdStr(data->fd, USR_FND, packet.id, dest->uname);
+                }
+                else{
+                    // Usr not exists
+                    sendCode(data->fd, USR_NFND);
+                }
+            }
+            else{
+                printf("Got: %i\n", packet.code);
             }
         }
     }
-    
-    conn_log(INFO, data, "Closing handler.");
+
+    if(exit_flag){
+        // Notify clients of exit flag
+        sendCode(data->fd, S_QUIT);
+        conn_log(INFO, data, "Closing handler: exit flag.");
+    }
 
     // Remove the client from the client list
+    //  No other thread will be able to find it now,
+    //  So we can delete everything.
     rw_list_delete(data->clients, client_id);
+
+    // Purge queue for anything that might still be there
+    msg_t* ptr;
+    while((ptr = (msg_t*)q_pop(queue)) != NULL){
+        destroyMsg(ptr);
+    }
+
     // Free the associated queue
     free(queue);
+
     // Free data struct pased on to the thread
     free(data);
     pthread_exit(NULL);

@@ -18,8 +18,7 @@
 	Based on code from:
 		https://stackoverflow.com/questions/20800319/how-do-i-get-my-ip-address-in-c-on-linux
 */
-void printLocalIPs()
-{
+void printLocalIPs() {
 	struct ifaddrs * addrs;
 	struct ifaddrs * tmp;
 
@@ -50,8 +49,7 @@ void printLocalIPs()
     Returns the file descriptor for the socket
     Remember to close the socket when finished
 */
-int initServer(char * port, int max_queue)
-{
+int initServer(char * port, int max_queue) {
     struct addrinfo hints;
     struct addrinfo * server_info = NULL;
     int server_fd;
@@ -70,38 +68,33 @@ int initServer(char * port, int max_queue)
     // GETADDRINFO
     // Use the presets to get the actual information for the socket
     // The result is stored in 'server_info'
-    if (getaddrinfo(NULL, port, &hints, &server_info) == -1)
-    {
+    if (getaddrinfo(NULL, port, &hints, &server_info) == -1) {
         fatalError("ERROR: getaddrinfo");
     }
 
     // SOCKET
     // Open the socket using the information obtained
     server_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-    if (server_fd == -1) 
-    {
+    if (server_fd == -1) {
         close(server_fd);
         fatalError("ERROR: socket");
     }
 
     // SETSOCKOPT
     // Allow reuse of the same port even when the server does not close correctly
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof (int)) == -1)
-    {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof (int)) == -1) {
         fatalError("ERROR: setsockopt");
     }
 
     // BIND
     // Connect the port with the desired port
-    if (bind(server_fd, server_info->ai_addr, server_info->ai_addrlen) == -1)
-    {
+    if (bind(server_fd, server_info->ai_addr, server_info->ai_addrlen) == -1) {
         fatalError("ERROR: bind");
     }
 
     // LISTEN
     // Start listening for incomming connections
-    if (listen(server_fd, max_queue) == -1)
-    {
+    if (listen(server_fd, max_queue) == -1) {
         fatalError("ERROR: listen");
     }
 
@@ -117,8 +110,7 @@ int initServer(char * port, int max_queue)
     Returns the file descriptor for the socket
     Remember to close the socket when finished
 */
-int connectSocket(char * address, char * port)
-{
+int connectSocket(char * address, char * port) {
     struct addrinfo hints;
     struct addrinfo * server_info = NULL;
     int connection_fd;
@@ -136,24 +128,21 @@ int connectSocket(char * address, char * port)
     // GETADDRINFO
     // Use the presets to get the actual information for the socket
     // The result is stored in 'server_info'
-    if (getaddrinfo(address, port, &hints, &server_info) == -1)
-    {
+    if (getaddrinfo(address, port, &hints, &server_info) == -1) {
         fatalError("ERROR: getaddrinfo");
     }
 
     // SOCKET
     // Open the socket using the information obtained
     connection_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-    if (connection_fd == -1) 
-    {
+    if (connection_fd == -1)  {
         close(connection_fd);
         fatalError("ERROR: socket");
     }
 
     // CONNECT
     // Connect to the server
-    if (connect(connection_fd, server_info->ai_addr, server_info->ai_addrlen) == -1)
-    {
+    if (connect(connection_fd, server_info->ai_addr, server_info->ai_addrlen) == -1) {
         close(connection_fd);
         fatalError("ERROR: connect");
     }
@@ -170,8 +159,7 @@ int connectSocket(char * address, char * port)
     Receive the file descriptor, a string to store the message and the max string size
     Returns 1 on successful receipt, or 0 if the connection has finished
 */
-int recvString(int connection_fd, char * buffer, int size)
-{
+int recvString(int connection_fd, char * buffer, int size) {
     int chars_read;
 
     // Clear the buffer
@@ -197,11 +185,13 @@ int recvString(int connection_fd, char * buffer, int size)
     Send a message with error validation
     Receive the file descriptor and the string pointer
 */
-void sendString(int connection_fd, char * buffer)
-{
+void sendString(int connection_fd, char * buffer) {
     // Send a message to the client, including an extra character for the '\0'
     if ( send(connection_fd, buffer, strlen(buffer)+1, 0) == -1 )
     {
         fatalError("ERROR: send");
     }
 }
+
+
+

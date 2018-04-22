@@ -1,66 +1,68 @@
 
+#include "client.h"
 
-/**
- * Francisco Huelsz Prince
- * A01019512
- */
+#include <signal.h>
 
-/*
-    Client program to access the accounts in the bank
-    This program connects to the server using sockets
-
-    Gilberto Echeverria
-    gilecheverria@yahoo.com
-    29/03/2018
-*/
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-// Sockets libraries
-#include <netdb.h>
-#include <arpa/inet.h>
-// poll
-#include <sys/poll.h>
-// Custom libraries
-#include "sockets.h"
-#include "fatal_error.h"
-
-#define BUFFER_SIZE 1024
-
-///// FUNCTION DECLARATIONS
 void usage(char * program);
-void client_ops(int fd);
+void exitHandler(int signal);
 
-void purgeStdin(){
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
+int main(int argc, char * argv[]){
 
-///// MAIN FUNCTION
-int main(int argc, char * argv[])
-{
+    char buffer[SOCK_BUFF_SIZE];
+
     int connection_fd;
-
-    printf("\n=== BANK CLIENT PROGRAM ===\n");
-
+    
     // Check the correct arguments
-    if (argc != 3)
-    {
+    if (argc != 3) {
         usage(argv[0]);
     }
 
-    // Start the server
-    connection_fd = connectSocket(argv[1], argv[2]);
-	
+    // Get username
+    char* uname = getUsername();
 
-    client_ops(connection_fd);
     
+    // Start the client
+    connection_fd = connectSocket(argv[1], argv[2]);
+    
+    // Send hello message
+    sendCodeStr(connection_fd, C_START, uname);
 
+    packet_t resp;
+    if(!readPacket(connection_fd, &resp)){
+        printf("Could not log in!\n");
+        exit(0);
+    }
+    else if(resp.code != REQ_OK){
+        printf("Error!\nUsername taken!\n");
+        exit(0);
+    }else{
+        //Setup sigint handler
+        signal(SIGINT, exitHandler);
+
+        // Start ncurses
+        startNcurses();
+
+        // Get screen size
+        int stdscr_h, stdscr_w;
+        getmaxyx(stdscr, stdscr_h, stdscr_w);
+
+        // Create GUI struct and save screen size to it
+        GUI_t gui;
+        gui.stdscr_h = stdscr_h;
+        gui.stdscr_w = stdscr_w;
+
+        // Initialize GUI: draw windows, borders and all that
+        initGUI(&gui);
+
+        clientLoop(&gui, connection_fd);
+
+        // End ncurses
+        endNcurses();
+    }
+    // Free username memory
+    free(uname);
     // Close the socket
     close(connection_fd);
-
     return 0;
 }
 
@@ -74,65 +76,9 @@ void usage(char * program)
     exit(EXIT_FAILURE);
 }
 
-void client_ops(int fd){
-    char buffer[1024];
-
-    // Stuff required by poll stdin
-    struct pollfd test_fds[1];
-    int timeout = 10; // 10ms tiemout
-    int poll_result;
-
-    char input = 0;
-    while(input != 'x'){
-        printf("OPTs:\n s - send\n x - exit\n");
-        while(1){
-            test_fds[0].fd = stdin->_fileno;
-            test_fds[0].events = POLLIN;
-            poll_result = poll(test_fds, 1, timeout);
-            if(poll_result == -1){
-                //??
-                fatalError("STDIN poll");
-            }
-            else if(poll_result == 0){
-                // Nothing: check for server replies
-                test_fds[0].fd = fd;
-                test_fds[0].events = POLLIN;
-                poll_result = poll(test_fds, 1, timeout);
-                if(poll_result == -1){
-                    //??
-                    fatalError("Server poll");
-                }
-                else if(poll_result == 0){
-                    // Nothing: continue polling
-                    continue;
-                }
-                else{
-                    // Got something, most likely a BYE: read and make sure
-                    // Receive the response
-                    if (recvString(fd, buffer, BUFFER_SIZE) ){
-                        printf("\n\nServer sent: %s\n", buffer);
-                        //exit(0);
-                    }
-                    else {
-                        exit(0);
-                    }
-                }
-            }
-            else{
-                scanf(" %c", &input);
-                break;
-            }
-        }
-
-        switch(input){
-            case 'x':
-                exit(0);
-            case 's':
-                printf("Write:\n");
-                purgeStdin();
-                fgets(buffer, 1024, stdin);
-                printf("sending: %s\n", buffer);
-                sendString(fd, buffer);
-        }
-    }
+/**
+ * SIGINT handler
+ */
+void exitHandler(int signal){
+    activateExitFlag();
 }

@@ -14,12 +14,16 @@
 // Posix threads library
 #include <pthread.h>
 
+// Strings
+#include <string.h>
+
 // Custom libraries
 #include "protocol.h"
 #include "sockets.h"
 #include "fatal_error.h"
 #include "structs.h"
 #include "rw_list/rw_list.h"
+#include "queue/queue.h"
 
 // SERVER DEFINITIONS
 #define BUFFER_SIZE 1024
