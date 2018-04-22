@@ -113,6 +113,15 @@ int find_in_list_by_uname(rw_list_t* chat_list, chat_t** dest, char* name){
     return 0;
 }
 
+void showConenctionLost(WINDOW* win){
+    wattron(win, COLOR_PAIR(1));
+    wprintw(win, "Server closing connection!\nPress any key to close...\n");
+    wattroff(win, COLOR_PAIR(1));
+    wrefresh(win);
+    timeout(-1);
+    getch();
+}
+
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///                                   PUBLIC FUNCTIONS
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -290,7 +299,10 @@ void clientLoop(GUI_t* gui, int fd){
             // Something was received
             else{
                 // Read incomming packet
-                readPacket(fd, &packet);
+                if(!readPacket(fd, &packet)){
+                    showConenctionLost(current->win);
+                    break;
+                }
                 // If server quitting
                 if(packet.code == S_QUIT){
                     wattron(current->win, COLOR_PAIR(1));
@@ -317,7 +329,10 @@ void clientLoop(GUI_t* gui, int fd){
                     else{
                         sendCodeIdStr(fd, QRY_USR_ID, packet.id, "");
                         packet_t new_chat_pkt;
-                        readPacket(fd, &new_chat_pkt);
+                        if(!readPacket(fd, &new_chat_pkt)){
+                            showConenctionLost(current->win);
+                            break;
+                        }
                         if(new_chat_pkt.code == USR_FND){
                             chat_t* new_chat = create_chat(gui, packet.id, new_chat_pkt.msg);
                             rw_list_push_back(chat_list, (void*)new_chat);
@@ -406,7 +421,10 @@ void clientLoop(GUI_t* gui, int fd){
                 wattroff(current->win, COLOR_PAIR(5));
                 wrefresh(current->win);
                 sendCodeIdStr(fd, SND_MSG, current->id, buffer);
-                readPacket(fd, &packet);
+                if(!readPacket(fd, &packet)){
+                    showConenctionLost(current->win);
+                    break;
+                }
                 if(packet.code == REQ_ERR){
                     wattron(current->win, COLOR_PAIR(1));
                     wprintw(current->win, "Server: Client has disconencted!\n");
@@ -424,7 +442,10 @@ void clientLoop(GUI_t* gui, int fd){
                 if(!find_in_list_by_uname(chat_list, &found_chat, buffer)){
                     sendCodeStr(fd, QRY_USR, buffer);
                     packet_t new_chat_pkt;
-                    readPacket(fd, &new_chat_pkt);
+                    if(!readPacket(fd, &new_chat_pkt)){
+                        showConenctionLost(current->win);
+                        break;
+                    }
                     if(new_chat_pkt.code == USR_FND){
                         chat_t* new_chat = create_chat(gui, new_chat_pkt.id, new_chat_pkt.msg);
                         rw_list_push_back(chat_list, (void*)new_chat);
