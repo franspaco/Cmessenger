@@ -5,15 +5,6 @@
  * A01019512
  */
 
-/*
-    Client program to access the accounts in the bank
-    This program connects to the server using sockets
-
-    Gilberto Echeverria
-    gilecheverria@yahoo.com
-    29/03/2018
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +61,7 @@ int main(int argc, char * argv[]) {
         data->dest = argv[3];
         pthread_create(&tids[i], NULL, threads, (void*)data);
         printf("[%i] CREATED.\n", i+1);
+        usleep(300000);
     }
 
     for(int i = 0; i < THREAD_POOL; i++){
@@ -142,7 +134,7 @@ void* threads(void* arg){
         if(!readPacket(fd, &packet)){
             threadCleanup(data, fd);
         }
-        usleep(100000);
+        usleep(1000);
     }
 
     sendCode(fd, C_QUIT);

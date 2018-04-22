@@ -59,7 +59,7 @@ int main(int argc, char * argv[]) {
     while(1){
         packet_t packet;
         readPacket(fd, &packet);
-        printf("Got: %i %li %s\n", packet.code, packet.id, packet.msg);
+        //printf("Got: %i %li %s\n", packet.code, packet.id, packet.msg);
         printf("Tot: %i\n", ++count);
     }
     cleanup(fd);
