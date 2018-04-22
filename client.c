@@ -266,8 +266,12 @@ void clientLoop(GUI_t* gui, int fd){
             selected = 0;
         }
 
+        // Exit flag activated
+        if(exit_flag){
+            break;
+        }
         // Input Timeout: no user input. Check the socket.
-        if(ch == -1){
+        else if(ch == -1){
             int poll = pollSocket(fd);
             // If error was raised during the polling
             if(poll == -1){
