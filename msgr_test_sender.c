@@ -32,8 +32,8 @@
 
 #define BUFFER_SIZE 1024
 
-#define THREAD_POOL 5
-#define MSG_COUNT 5
+#define THREAD_POOL 20
+#define MSG_COUNT 100
 
 ///// FUNCTION DECLARATIONS
 void usage(char * program);
@@ -134,16 +134,6 @@ void* threads(void* arg){
     }
     id = packet.id;
 
-    usleep(100000*(rand()%10+1));
-    
-    sendCodeIdStr(fd, SND_MSG, id, "HI!");
-    printf("[%i] Hello string -> %li\n", data->id, id);
-    if(!readPacket(fd, &packet)){
-        threadCleanup(data, fd);
-    }
-
-    usleep(100000*(rand()%10+1));
-
     char message[30];
     for(int i = 0; i < MSG_COUNT; i++){
         randStr(message, 30);
@@ -152,7 +142,7 @@ void* threads(void* arg){
         if(!readPacket(fd, &packet)){
             threadCleanup(data, fd);
         }
-        usleep(100000*(rand()%10+1));
+        usleep(100000);
     }
 
     sendCode(fd, C_QUIT);

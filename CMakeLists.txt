@@ -4,7 +4,8 @@ set(CMAKE_C_STANDARD 11)
 
 set(SERVER "msg_server")
 set(CLIENT "msg_client")
-set(TEST_CLIENT "msg_test_client")
+set(TEST_SENDER "msg_test_sender")
+set(TEST_LISTENER "msg_test_listener")
 
 set(FATAL_ERROR fatal_error.h fatal_error.c)
 set(SOCKETS sockets.h sockets.c)
@@ -22,5 +23,8 @@ target_link_libraries("${SERVER}" pthread)
 add_executable("${CLIENT}" msgr_client.c ${CLIENT_SOURCES})
 target_link_libraries("${CLIENT}" pthread ncurses panel)
 
-add_executable("${TEST_CLIENT}" msgr_test_client.c ${TEST_CLIENT_SOURCES})
-target_link_libraries("${TEST_CLIENT}" pthread)
+add_executable("${TEST_SENDER}" msgr_test_sender.c ${TEST_CLIENT_SOURCES})
+target_link_libraries("${TEST_SENDER}" pthread)
+
+add_executable("${TEST_LISTENER}" msgr_test_listener.c ${TEST_CLIENT_SOURCES})
+target_link_libraries("${TEST_LISTENER}" pthread)
