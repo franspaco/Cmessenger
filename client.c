@@ -41,7 +41,7 @@ int deleteLast(WINDOW* win){
 
 chat_t* create_chat(GUI_t* gui, long id, char* name){
     chat_t* temp = malloc(sizeof(chat_t));
-    temp->win = create_win(gui->stdscr_w - LIST_WIDTH - 2, gui->stdscr_h - TEXTBOX_HEIGHT - 2, LIST_WIDTH + 1, 0 + 1);
+    temp->win = create_win(gui->stdscr_w - LIST_WIDTH - 2, gui->stdscr_h - TEXTBOX_HEIGHT - 3, LIST_WIDTH + 1, 0 + 1);
     // Activate scroll lock on win
     scrollok(temp->win, TRUE);
     // Clear screen
@@ -181,12 +181,17 @@ void initGUI(GUI_t* gui){
     int stdscr_h = gui->stdscr_h;
     int stdscr_w = gui->stdscr_w;
 
+    attron(COLOR_PAIR(3));
+    mvprintw(stdscr_h -1, 0, "  F1 - Exit   |  F4 - Start new chat  |  UP/DN keys - change chat");
+    attroff(COLOR_PAIR(3));
+    refresh();
+
     // Make border and content boxes for input and list
-    init_win_box(&(gui->input), stdscr_w - LIST_WIDTH, TEXTBOX_HEIGHT, LIST_WIDTH, LINES - TEXTBOX_HEIGHT);
-    init_win_box(&(gui->list), LIST_WIDTH, stdscr_h, 0, 0);
+    init_win_box(&(gui->input), stdscr_w - LIST_WIDTH, TEXTBOX_HEIGHT, LIST_WIDTH, LINES - TEXTBOX_HEIGHT - 1);
+    init_win_box(&(gui->list), LIST_WIDTH, stdscr_h - 1, 0, 0);
 
     // Create just the border
-    gui->content_box = create_win_box(stdscr_w - LIST_WIDTH, stdscr_h - TEXTBOX_HEIGHT, LIST_WIDTH, 0);
+    gui->content_box = create_win_box(stdscr_w - LIST_WIDTH, stdscr_h - TEXTBOX_HEIGHT - 1, LIST_WIDTH, 0);
 
     // Activate scroll lock on input
     scrollok(gui->input.content, TRUE);
@@ -301,9 +306,9 @@ void clientLoop(GUI_t* gui, int fd){
                     chat_t* found_chat;
                     // If chat with that is already exists
                     if(find_in_list_by_ID(chat_list, &found_chat, packet.id)){
-                        wattron(found_chat->win, COLOR_PAIR(7));
+                        wattron(found_chat->win, COLOR_PAIR(2));
                         wprintw(found_chat->win, "%s: %s\n", found_chat->uname, packet.msg);
-                        wattroff(found_chat->win, COLOR_PAIR(7));
+                        wattroff(found_chat->win, COLOR_PAIR(2));
                         if(current->id == found_chat->id){
                             wrefresh(current->win);
                         }
@@ -316,9 +321,9 @@ void clientLoop(GUI_t* gui, int fd){
                         if(new_chat_pkt.code == USR_FND){
                             chat_t* new_chat = create_chat(gui, packet.id, new_chat_pkt.msg);
                             rw_list_push_back(chat_list, (void*)new_chat);
-                            wattron(new_chat->win, COLOR_PAIR(7));
+                            wattron(new_chat->win, COLOR_PAIR(2));
                             wprintw(new_chat->win, "%s: %s\n", new_chat->uname, packet.msg);
-                            wattroff(new_chat->win, COLOR_PAIR(7));
+                            wattroff(new_chat->win, COLOR_PAIR(2));
                         }
                     }
                     // Make sure top panel is drawn
@@ -396,9 +401,9 @@ void clientLoop(GUI_t* gui, int fd){
         else if(ch == 10){
             // If normal send
             if(!new_conn && nextch > 0){
-                wattron(current->win, COLOR_PAIR(2));
+                wattron(current->win, COLOR_PAIR(5));
                 wprintw(current->win, "you: %s\n", buffer);
-                wattroff(current->win, COLOR_PAIR(2));
+                wattroff(current->win, COLOR_PAIR(5));
                 wrefresh(current->win);
                 sendCodeIdStr(fd, SND_MSG, current->id, buffer);
                 readPacket(fd, &packet);
