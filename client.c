@@ -373,7 +373,7 @@ void clientLoop(GUI_t* gui, int fd){
             }
         }
         // If backspace: delete
-        else if(ch == KEY_BACKSPACE){
+        else if(ch == KEY_BACKSPACE || ch == MACOS_BACKSPACE){
             // If there's something to delete
             if(nextch > 0){
                 buffer[--nextch] = '\0';
