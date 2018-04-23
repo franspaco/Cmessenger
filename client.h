@@ -27,6 +27,8 @@
 #define LIST_WIDTH 25
 #define TEXTBOX_HEIGHT 5
 
+#define MACOS_BACKSPACE 127
+
 // Max allowed message length
 //  (Must be smaller than SOCK_BUFF_SIZE !! )
 #define USER_BUFF_SIZE 512
