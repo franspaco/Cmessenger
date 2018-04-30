@@ -449,7 +449,7 @@ void clientLoop(GUI_t* gui, int fd){
                 }
                 if(packet.code == REQ_ERR){
                     wattron(current->win, COLOR_PAIR(1));
-                    wprintw(current->win, "Server: Client has disconencted!\n");
+                    wprintw(current->win, "Server: Client has disconnected!\n");
                     wattroff(current->win, COLOR_PAIR(1));
                     wrefresh(current->win);
                 }
