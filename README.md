@@ -21,8 +21,8 @@ To install ncurses in ubuntu run:
 
 1. Clone Git repository
 2. Create a folder called "build" inside
-3. Inside build run: `cmake ..`   This will detect your compiler an generate a makefile.
-4. Run `make`  To compile the source files into the executables.
+3. Inside build run: `cmake ..`   This will detect your compiler and generate a makefile.
+4. Run `make`  to compile the source files into the executables.
 
 ## Running the program
 
