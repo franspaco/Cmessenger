@@ -26,7 +26,7 @@ To install ncurses in ubuntu run:
 
 ## Running the program
 
-When the software is build it produces two separate executables:
+When the software is built it produces two separate executables:
 
 * msg_server
 * msg_client
