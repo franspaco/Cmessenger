@@ -38,6 +38,7 @@ typedef struct chat_struct{
     PANEL* panel;
     long id;
     char uname[UNAME_LENGTH];
+    int notification;
 } chat_t;
 
 typedef struct window_with_border{
